@@ -23,13 +23,13 @@
   #q:focus{border-color:var(--accent)}
   header .hint{color:var(--dim);font-size:12px}
   .layout{display:flex}
-  aside{width:225px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);
+  aside{width:235px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);
     overflow-y:auto;padding:16px 10px;border-right:1px solid var(--line)}
   aside a{display:block;color:var(--dim);text-decoration:none;padding:5px 10px;
     border-radius:6px;font-size:13px}
   aside a:hover{background:var(--panel2);color:var(--text)}
   aside a.active{background:var(--panel2);color:var(--accent)}
-  main{flex:1;min-width:0;padding:20px 26px 80px;max-width:1080px}
+  main{flex:1;min-width:0;padding:20px 26px 80px;max-width:1120px}
   section{margin-bottom:44px;scroll-margin-top:70px}
   h1{font-size:26px;margin:6px 0 4px}
   h2{font-size:19px;margin:0 0 12px;color:var(--accent)}
@@ -59,6 +59,7 @@
   .b-ver{color:var(--purple);border-color:var(--purple)}
   .b-impl{color:var(--dim);border-color:var(--dim)}
   .b-dgr{color:var(--red);border-color:var(--red)}
+  .b-new{color:var(--green);border-color:var(--green)}
   .banner{background:#1d1418;border:1px solid #5b2733;border-left:4px solid var(--red);
     border-radius:10px;padding:12px 16px;margin:14px 0;color:#f3c9c9}
   .note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
@@ -76,13 +77,19 @@
     border-radius:8px;padding:7px 10px;font-family:ui-monospace,monospace;outline:none}
   .pg .out{font-family:ui-monospace,monospace;color:var(--green)}
   footer{color:var(--dim);font-size:12px;padding:20px;border-top:1px solid var(--line);text-align:center}
+  .diagram{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;
+    font:12px/1.5 ui-monospace,Consolas,monospace;color:#cfe6ff;overflow-x:auto;white-space:pre}
+  .idtbl td:nth-child(1),.idtbl td:nth-child(2){white-space:nowrap}
+  details{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin:10px 0}
+  details summary{cursor:pointer;padding:10px 14px;color:var(--accent);font-size:13px;font-weight:600}
+  details .inner{padding:0 14px 14px}
 </style>
 </head>
 <body>
 <header>
   <div class="brand">⛏ MC Protocol Values — Anticrash Reference</div>
-  <input id="q" type="search" placeholder="Filter… try: varint, book, 2097152, compression">
-  <span class="hint">Java Edition · wiki.vg merge + Netty ByteBuf</span>
+  <input id="q" type="search" placeholder="Filter… try: varint, book, 2097152, ByteBuf, packet id">
+  <span class="hint">Java Edition · wiki.vg merge (Minecraft Wiki) + Netty ByteBuf</span>
 </header>
 
 <div class="layout">
@@ -91,13 +98,19 @@
     <a href="#intro">Overview</a>
     <a href="#versions">Protocol versions</a>
     <a href="#framing">Packet framing &amp; compression</a>
-    <a href="#types">Data types</a>
+    <a href="#types">Data types (full catalog)</a>
+    <a href="#varint">VarInt &amp; VarLong</a>
     <a href="#strings">String &amp; packet limits</a>
+    <a href="#registry">Registry &amp; inline types</a>
+    <a href="#teleport-light">Teleport flags &amp; light data</a>
+    <a href="#profile">Game Profile / Resolvable Profile</a>
     <a href="#nbt">NBT &amp; components</a>
     <a href="#items">Item stacks &amp; slots</a>
     <a href="#metadata">Entity metadata</a>
     <a href="#position">Position / Angle / UUID</a>
+    <a href="#packetids">Packet ID tables</a>
     <a href="#vectors">Crash &amp; exploit vectors</a>
+    <a href="#netty">Netty ByteBuf reference</a>
     <a href="#code">Netty guard code</a>
     <a href="#sources">Sources</a>
   </nav>
@@ -110,18 +123,27 @@
   <h1>Minecraft Protocol Values for Anticrash Development</h1>
   <p>A single-page reference of every wire-format constant, vanilla-enforced packet limit and known
      crash vector used when writing server-side validation (anticrash) for Minecraft Java Edition.
-     Built from the <a href="https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol">Minecraft&nbsp;Wiki wiki.vg merge</a>,
-     the <a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">Netty 4 ByteBuf javadoc</a>, PrismarineJS
+     Built from the <a href="https://minecraft.wiki/w/Java_Edition_protocol/Packets">Minecraft&nbsp;Wiki — Java Edition protocol/Packets (the wiki.vg merge)</a>,
+     the <a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">Netty 4.0 ByteBuf javadoc</a>, PrismarineJS
      <code>minecraft-data</code>, MCProtocolLib and ViaVersion sources.</p>
   <div class="banner">⚠ <b>Read this first:</b> numbers marked <span class="b b-wire">wire</span> are protocol constants;
     <span class="b b-van">vanilla</span> are enforced by the vanilla server/client (safe baselines for kicks);
-    <span class="b b-ver">version-dep</span> changed between releases — always re-check per protocol version in the links below.
+    <span class="b b-ver">version-dep</span> changed between releases — always re-check per protocol version in the links below;
+    <span class="b b-new">confirmed live</span> was pulled directly from the wiki page for the current release during this update.
     These are defensive limits, not guaranteed constants.</div>
+  <div class="note">The wiki.vg-merge protocol article on the Minecraft Wiki is published under
+    <a href="https://creativecommons.org/licenses/by-sa/3.0/">CC BY‑SA 3.0</a>, which explicitly permits building
+    servers/clients/bots from it. Values below are reorganized and re-described for anticrash use rather than
+    copied verbatim; consult the source page directly for the canonical field-by-field packet layouts.</div>
 </section>
 
 <!-- ============ VERSIONS ============ -->
 <section id="versions">
-  <h2>Protocol version numbers <span class="b b-ver">verify latest</span></h2>
+  <h2>Protocol version numbers <span class="b b-new">confirmed live</span></h2>
+  <p>The Minecraft Wiki's protocol article is currently dissecting <b>release 26.2, protocol <span class="num">776</span></b>.
+     Historical mapping below; always cross-check the live
+     <a href="https://minecraft.wiki/w/Protocol_version_numbers">Protocol version numbers</a> page since new minor
+     releases land continuously.</p>
   <table><thead><tr><th>Minecraft</th><th>Protocol</th><th>Notes</th></tr></thead><tbody>
     <tr><td>1.8 – 1.8.9</td><td class="num">47</td><td>Pre-Thermos era, no “states” before 1.13</td></tr>
     <tr><td>1.12.2</td><td class="num">340</td><td>Common legacy target</td></tr>
@@ -133,63 +155,126 @@
     <tr><td>1.20.2</td><td class="num">764</td><td><b>Configuration state added</b>, network NBT root-name omitted</td></tr>
     <tr><td>1.20.3 – 1.20.4</td><td class="num">765</td><td>Text components become NBT on the wire</td></tr>
     <tr><td>1.20.5 – 1.20.6</td><td class="num">766</td><td><b>Item components replace NBT items</b>, Transfer intent (3)</td></tr>
-    <tr><td>1.21 – 1.21.1</td><td class="num">767</td><td>1.21.1 shares 767</td></tr>
+    <tr><td>1.21 – 1.21.1</td><td class="num">767</td><td>1.21.1 shares 767; data-generator packet IDs available from here on</td></tr>
     <tr><td>1.21.2 – 1.21.3</td><td class="num">768</td><td>Metadata types change again</td></tr>
     <tr><td>1.21.4</td><td class="num">769</td><td>—</td></tr>
     <tr><td>1.21.5</td><td class="num">770</td><td>—</td></tr>
     <tr><td>1.21.6</td><td class="num">771</td><td>—</td></tr>
     <tr><td>1.21.7 – 1.21.8</td><td class="num">772</td><td>1.21.8 shares 772</td></tr>
-    <tr><td>1.21.9 / 1.21.10+</td><td class="num">773 / 774</td><td class="b b-ver">version-dep — confirm on the wiki page below</td></tr>
+    <tr><td>1.21.9 – 1.21.10</td><td class="num">773 – 774</td><td class="b b-ver">version-dep</td></tr>
+    <tr><td>26.1</td><td class="num">775</td><td class="b b-ver">version-dep — new year-based release numbering</td></tr>
+    <tr><td><b>26.2 (current)</b></td><td class="num"><b>776</b></td><td class="b b-new">confirmed live — Debug subscription packets, Code of Conduct packets, Waypoint packet added</td></tr>
   </tbody></table>
   <div class="note">Anticrash rule of thumb: validate against <i>ranges</i> (max sizes, bit widths, enum bounds) that hold
-    across many versions, and keep a small per-version table for the ones that shift (book/sign/metadata).</div>
+    across many versions, and keep a small per-version table for the ones that shift (book/sign/metadata/packet IDs).
+    Mojang switched to year.minor release numbering (e.g. 26.1, 26.2) during 2025–2026; protocol numbers keep
+    incrementing independently of that scheme.</div>
 </section>
 
 <!-- ============ FRAMING ============ -->
 <section id="framing">
   <h2>Packet framing &amp; compression</h2>
   <table><thead><tr><th>Field</th><th>Value</th><th>Kind</th></tr></thead><tbody>
-    <tr><td>Packet length prefix</td><td><code>VarInt</code>, must fit in <span class="num">3</span> bytes (max <span class="num">2,097,151</span>)</td><td><span class="b b-wire">wire</span></td></tr>
-    <tr><td>Max packet size (vanilla decoder)</td><td><span class="num">2,097,152</span> = <code>0x200000</code> → else kicked</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Packet length prefix</td><td><code>VarInt</code>, must fit in <span class="num">3</span> bytes (max <span class="num">2,097,151</span> = 2²¹−1)</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Max packet size (vanilla decoder)</td><td><span class="num">2,097,151</span> bytes → longer length VarInts are rejected outright</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>“VarInt is too big”</td><td>Vanilla error when length VarInt exceeds 3 bytes</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>“Bad packet id”</td><td>Kick when Packet ID VarInt is unknown for the state</td><td><span class="b b-van">vanilla</span></td></tr>
-    <tr><td>Compression (Set Compression, login)</td><td>Threshold <code>VarInt</code> ≥ 0; vanilla default <span class="num">256</span></td><td><span class="b b-van">vanilla</span></td></tr>
-    <tr><td>Compressed framing</td><td>Len | DataLength VarInt (0 = below threshold, raw) | zlib</td><td><span class="b b-wire">wire</span></td></tr>
-    <tr><td>“Badly compressed packet”</td><td>Uncompressed size &gt; <span class="num">2,097,152</span> → kick</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Compression (Set Compression, login)</td><td>Threshold <code>VarInt</code> ≥ 0; negative or omitted disables compression</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Compressed framing</td><td>Packet Length VarInt | Data Length VarInt (0 = below threshold, raw) | zlib(Packet ID + Data)</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Serverbound uncompressed cap <span class="b b-new">confirmed live</span></td><td>Uncompressed (Packet ID + Data) must not exceed <span class="num">8,388,608</span> bytes (2²³); the vanilla <i>client</i> enforces no such cap on incoming compressed packets</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Below-threshold rule</td><td>Vanilla server rejects a <i>compressed</i> packet smaller than the threshold, but accepts an <i>uncompressed</i> packet larger than it</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>States</td><td>Handshake → Status / Login → <b>Config (1.20.2+)</b> → Play</td><td><span class="b b-wire">wire</span></td></tr>
     <tr><td>Handshake next-state intents</td><td><span class="num">1</span>=Status, <span class="num">2</span>=Login, <span class="num">3</span>=Transfer (1.20.5+)</td><td><span class="b b-wire">wire</span></td></tr>
   </tbody></table>
   <h3>Anticrash framing checks</h3>
-  <p>Reject: length VarInt &gt; 3 bytes · length &gt; 0x200000 · DataLength &gt; 0x200000 ·
-     zlib output exceeding its declared size · packets arriving before Set Compression · unknown intent ≠ 1/2/3.</p>
+  <p>Reject: length VarInt &gt; 3 bytes · length &gt; 2,097,151 · DataLength &gt; 2,097,151 (clientbound) or &gt; 8,388,608 (serverbound) ·
+     zlib output exceeding its declared size · packets arriving before Set Compression on a connection that already advertised one ·
+     unknown handshake intent ≠ 1/2/3.</p>
 </section>
 
-<!-- ============ DATA TYPES ============ -->
+<!-- ============ DATA TYPES (FULL CATALOG) ============ -->
 <section id="types">
-  <h2>Data types <span class="b b-wire">wire</span></h2>
-  <p>All multi-byte values are <b>big-endian</b>. This is what a Netty <code>ByteBuf</code> gives you natively;
-     VarInt/VarLong, strings and structures are Minecraft’s own layer.</p>
-  <table><thead><tr><th>Type</th><th>Size</th><th>Range / encoding</th></tr></thead><tbody>
-    <tr><td><code>Boolean</code></td><td class="num">1</td><td><code>0x00</code>=false, anything else true (read <code>readBoolean</code>)</td></tr>
-    <tr><td><code>Byte</code> / <code>Unsigned Byte</code></td><td class="num">1</td><td>−128..127 / 0..255</td></tr>
-    <tr><td><code>Short</code> / <code>Unsigned Short</code></td><td class="num">2</td><td>−32,768..32,767 / 0..65,535</td></tr>
-    <tr><td><code>Int</code> / <code>Unsigned Int</code></td><td class="num">4</td><td>−2³¹..2³¹−1 / 0..2³²−1</td></tr>
-    <tr><td><code>Long</code></td><td class="num">8</td><td>−2⁶³..2⁶³−1</td></tr>
-    <tr><td><code>Float</code> / <code>Double</code></td><td class="num">4 / 8</td><td>IEEE-754, big-endian</td></tr>
-    <tr><td><code>VarInt</code></td><td class="num">1–5</td><td>LEB128: 7 data bits + MSB continuation. 32-bit two’s complement — negatives always use 5 bytes. Vanilla errors past 5 bytes / 32 bits.</td></tr>
-    <tr><td><code>VarLong</code></td><td class="num">1–10</td><td>Same scheme, 64-bit. Max 10 bytes.</td></tr>
-    <tr><td><code>String</code> (n)</td><td class="num">1+n</td><td>VarInt <b>byte</b> length prefix (max 3,276,715 encodable; vanilla caps per packet) + UTF-8 bytes</td></tr>
-    <tr><td><code>Identifier</code></td><td class="num">1+n</td><td>Namespaced string <code>minecraft:foo_bar</code>, charset <code>[a-z0-9_.-]:/[a-z0-9_.-/]</code></td></tr>
-    <tr><td><code>Text Component</code></td><td class="num">var</td><td>1.20.3+: <b>NBT</b> (string or compound). Before: String containing JSON</td></tr>
-    <tr><td><code>Position</code></td><td class="num">8</td><td>Long: <code>X(26) | Z(26) | Y(12)</code>, sign-extended (see Position section)</td></tr>
-    <tr><td><code>Angle</code></td><td class="num">1</td><td>0..255 = 0..360° (step 1.40625°)</td></tr>
-    <tr><td><code>UUID</code></td><td class="num">16</td><td>Two big-endian longs (MSB, LSB)</td></tr>
-    <tr><td><code>Byte Array</code></td><td class="num">1+n</td><td>VarInt length + raw bytes — <b>primary OOM vector</b>, see code section</td></tr>
-    <tr><td><code>NBT</code></td><td class="num">var</td><td>Network NBT (see NBT section)</td></tr>
-    <tr><td><code>Bit Set</code></td><td class="num">var</td><td>VarInt long-count + that many Longs</td></tr>
-    <tr><td><code>Optional X</code></td><td class="num">1+n</td><td>Boolean present? + X if true</td></tr>
-    <tr><td><code>Array of X</code></td><td class="num">1+n</td><td>VarInt count + entries — validate count ≥ 0 and ≤ remaining bytes</td></tr>
-    <tr><td><code>Entity Metadata</code></td><td class="num">var</td><td>Entries until terminator <code>0xFF</code> (see Metadata section)</td></tr>
+  <h2>Complete data type catalog <span class="b b-new">confirmed live</span></h2>
+  <p>All multi-byte values are <b>big-endian</b> except VarInt/VarLong, which are effectively little-endian at the
+     7-bit-group level. This is the full type list as currently enumerated by the wiki.vg-merge protocol article,
+     reorganized with each type's exact size/range for validation purposes.</p>
+  <table><thead><tr><th>Type</th><th>Size (bytes)</th><th>Encodes</th><th>Anticrash note</th></tr></thead><tbody>
+    <tr><td><code>Boolean</code></td><td class="num">1</td><td>false / true</td><td><code>0x01</code>=true, <code>0x00</code>=false; some implementations treat any nonzero byte as true</td></tr>
+    <tr><td><code>Byte</code></td><td class="num">1</td><td>−128..127</td><td>signed two's complement</td></tr>
+    <tr><td><code>Unsigned Byte</code></td><td class="num">1</td><td>0..255</td><td>—</td></tr>
+    <tr><td><code>Short</code></td><td class="num">2</td><td>−32,768..32,767</td><td>signed</td></tr>
+    <tr><td><code>Unsigned Short</code></td><td class="num">2</td><td>0..65,535</td><td>used for ports, some counts</td></tr>
+    <tr><td><code>Int</code></td><td class="num">4</td><td>−2,147,483,648..2,147,483,647</td><td>signed</td></tr>
+    <tr><td><code>Long</code></td><td class="num">8</td><td>±9,223,372,036,854,775,807</td><td>signed</td></tr>
+    <tr><td><code>Float</code></td><td class="num">4</td><td>IEEE‑754 single</td><td>reject NaN/Infinity on movement/rotation fields</td></tr>
+    <tr><td><code>Double</code></td><td class="num">8</td><td>IEEE‑754 double</td><td>reject NaN/Infinity on position fields</td></tr>
+    <tr><td><code>String</code> (n)</td><td class="num">≥1, ≤(n×3)+3</td><td>UTF‑8, VarInt <b>byte</b>-length prefix</td><td>length limit <code>n</code> is counted in UTF‑16 code units (chars &gt; U+FFFF count as 2); max encodable <code>n</code> is 32,767; the “+3” is the max size of the length VarInt itself</td></tr>
+    <tr><td><code>Text Component</code></td><td class="num">varies</td><td>see Text component format</td><td>NBT: String tag for plain text, Compound tag otherwise (1.20.3+ wire format)</td></tr>
+    <tr><td><code>JSON Text Component</code></td><td class="num">≥1, ≤(262,144×3)+3</td><td>JSON string</td><td>max permitted <i>decode</i> length is 262,144 chars, but the vanilla server since 1.20.3 refuses to <i>encode</i> beyond 32,767 — treat both as hard caps</td></tr>
+    <tr><td><code>Identifier</code></td><td class="num">≥1, ≤(32,767×3)+3</td><td><code>namespace:value</code></td><td>encoded as a String with max length 32,767; namespace/value charset <code>[a-z0-9_.-]</code> (value also allows <code>/</code>)</td></tr>
+    <tr><td><code>VarInt</code></td><td class="num">1–5</td><td>−2,147,483,648..2,147,483,647</td><td>32-bit two's complement, no ZigZag; negatives always take 5 bytes</td></tr>
+    <tr><td><code>VarLong</code></td><td class="num">1–10</td><td>±9,223,372,036,854,775,807</td><td>64-bit two's complement, no ZigZag</td></tr>
+    <tr><td><code>Entity Metadata</code></td><td class="num">varies</td><td>per-entity misc data</td><td>entries until terminator <code>0xFF</code> — see Metadata section</td></tr>
+    <tr><td><code>Slot</code></td><td class="num">varies</td><td>item stack</td><td>see Items section</td></tr>
+    <tr><td><code>Hashed Slot</code></td><td class="num">varies</td><td>item stack, component values hashed</td><td>used in Set Creative Mode Slot direction on some versions</td></tr>
+    <tr><td><code>NBT</code></td><td class="num">varies</td><td>context-dependent</td><td>bound depth ≤512, total size, list lengths</td></tr>
+    <tr><td><code>Position</code></td><td class="num">8</td><td>x(-33,554,432..33,554,431), z(same), y(-2,048..2,047)</td><td>packed 26/26/12-bit long — see Position section</td></tr>
+    <tr><td><code>Angle</code></td><td class="num">1</td><td>0..255 = 0..360°, steps of 1/256 turn</td><td>—</td></tr>
+    <tr><td><code>UUID</code></td><td class="num">16</td><td>128-bit</td><td>two big-endian unsigned 64-bit longs (MSB, LSB)</td></tr>
+    <tr><td><code>BitSet</code></td><td class="num">varies</td><td>length-prefixed bit set</td><td>VarInt long-count, then that many <code>Long</code>s; bit <i>i</i> set when <code>Data[i/64] & (1&lt;&lt;(i%64)) != 0</code></td></tr>
+    <tr><td><code>Fixed BitSet</code> (n)</td><td class="num">ceil(n/8)</td><td>fixed-length bit set</td><td>byte-packed, not long-packed — different layout from BitSet</td></tr>
+    <tr><td><code>Optional</code> X</td><td class="num">0 or size of X</td><td>X or nothing</td><td>presence must be known from context, not self-describing</td></tr>
+    <tr><td><code>Prefixed Optional</code> X</td><td class="num">1 + (present ? size of X : 0)</td><td>boolean + X if present</td><td>self-describing — safer to validate than plain Optional</td></tr>
+    <tr><td><code>Array</code> of X</td><td class="num">length × size of X</td><td>fixed-length list</td><td>length must be known from context; validate against the container's actual capacity</td></tr>
+    <tr><td><code>Prefixed Array</code> of X</td><td class="num">size of VarInt + size of X × length</td><td>length-prefixed list</td><td>bound the VarInt length before allocating</td></tr>
+    <tr><td>X <code>Enum</code></td><td class="num">size of X</td><td>value from a fixed list</td><td>invalid value ⇒ vanilla usually disconnects the client or crashes it — validate against the known set</td></tr>
+    <tr><td><code>Byte Array</code></td><td class="num">varies</td><td>raw bytes</td><td>length from context — primary OOM vector, see code section</td></tr>
+    <tr><td><code>ID or</code> X</td><td class="num">size of VarInt + (size of X or 0)</td><td>registry ID or inline X</td><td>ID VarInt: 0 = inline value of type X follows; otherwise registry ID + 1</td></tr>
+    <tr><td><code>ID Set</code></td><td class="num">varies</td><td>set of registry IDs</td><td>Type VarInt: 0 = named tag reference (Identifier follows); otherwise an inline array of <code>Type − 1</code> VarInt IDs</td></tr>
+    <tr><td><code>Sound Event</code></td><td class="num">varies</td><td>playable sound descriptor</td><td>Sound Name (Identifier) + Has Fixed Range (Boolean) + optional Fixed Range (Float)</td></tr>
+    <tr><td><code>Chat Type</code></td><td class="num">varies</td><td>chat/narration decoration</td><td>Translation Key (String) + Parameters (Prefixed Array of VarInt Enum 0=sender/1=target/2=content) + Style (NBT)</td></tr>
+    <tr><td><code>Teleport Flags</code></td><td class="num">4</td><td>bit field</td><td>see dedicated section below</td></tr>
+    <tr><td><code>Recipe Display</code> / <code>Slot Display</code></td><td class="num">varies</td><td>client-side recipe/ingredient rendering data</td><td>bound nested slot-display arrays</td></tr>
+    <tr><td><code>Light Data</code></td><td class="num">varies</td><td>chunk light arrays</td><td>see dedicated section below</td></tr>
+    <tr><td><code>Either</code> X or Y</td><td class="num">1 + (isX ? size X : size Y)</td><td>boolean-tagged union</td><td>boolean true ⇒ X encoded, false ⇒ Y encoded</td></tr>
+    <tr><td><code>Game Profile</code></td><td class="num">varies</td><td>player profile</td><td>see dedicated section below</td></tr>
+    <tr><td><code>Resolvable Profile</code></td><td class="num">varies</td><td>partial or complete profile</td><td>see dedicated section below</td></tr>
+    <tr><td><code>Debug Subscription Event</code> / <code>Update</code> / <code>Data</code></td><td class="num">varies</td><td>F3 debug overlay data (26.x+)</td><td>low anticrash priority — debug-only, but still bound array/string lengths if relaying</td></tr>
+    <tr><td><code>LpVec3</code></td><td class="num">varies</td><td>low-precision vector, used for small velocities</td><td>—</td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ VARINT/VARLONG ============ -->
+<section id="varint">
+  <h2>VarInt &amp; VarLong — full encoding reference</h2>
+  <p>7 data bits per byte, MSB = continuation flag, least-significant group first (LEB128-style, but
+     <b>not</b> Protocol Buffers varints — Minecraft's variant never uses ZigZag, so negative values always
+     take the maximum byte count). VarInt caps at 5 bytes / 32 bits; VarLong caps at 10 bytes / 64 bits.
+     Unnecessarily long encodings (e.g. <code>0x81 0x00</code> for 1) are legal but wasteful — many implementations
+     reject them as non-canonical for defense-in-depth.</p>
+  <h3>Sample VarInts</h3>
+  <table><thead><tr><th>Value</th><th>Hex bytes</th></tr></thead><tbody>
+    <tr><td class="num">0</td><td><code>0x00</code></td></tr>
+    <tr><td class="num">1</td><td><code>0x01</code></td></tr>
+    <tr><td class="num">2</td><td><code>0x02</code></td></tr>
+    <tr><td class="num">127</td><td><code>0x7F</code></td></tr>
+    <tr><td class="num">128</td><td><code>0x80 0x01</code></td></tr>
+    <tr><td class="num">255</td><td><code>0xFF 0x01</code></td></tr>
+    <tr><td class="num">25,565</td><td><code>0xDD 0xC7 0x01</code></td></tr>
+    <tr><td class="num">2,097,151</td><td><code>0xFF 0xFF 0x7F</code></td></tr>
+    <tr><td class="num">2,147,483,647</td><td><code>0xFF 0xFF 0xFF 0xFF 0x07</code></td></tr>
+    <tr><td class="num">−1</td><td><code>0xFF 0xFF 0xFF 0xFF 0x0F</code></td></tr>
+    <tr><td class="num">−2,147,483,648</td><td><code>0x80 0x80 0x80 0x80 0x08</code></td></tr>
+  </tbody></table>
+  <h3>Sample VarLongs</h3>
+  <table><thead><tr><th>Value</th><th>Hex bytes</th></tr></thead><tbody>
+    <tr><td class="num">0</td><td><code>0x00</code></td></tr>
+    <tr><td class="num">127</td><td><code>0x7F</code></td></tr>
+    <tr><td class="num">128</td><td><code>0x80 0x01</code></td></tr>
+    <tr><td class="num">2,147,483,647</td><td><code>0xFF 0xFF 0xFF 0xFF 0x07</code></td></tr>
+    <tr><td class="num">9,223,372,036,854,775,807</td><td><code>0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0x7F</code></td></tr>
+    <tr><td class="num">−1</td><td><code>0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0x01</code></td></tr>
+    <tr><td class="num">−9,223,372,036,854,775,808</td><td><code>0x80 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0x80 0x01</code></td></tr>
   </tbody></table>
 </section>
 
@@ -211,12 +296,96 @@
     <tr><td>Anvil rename</td><td>≤ <span class="num">50</span> chars</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>Team name</td><td>≤ <span class="num">16</span> chars; prefix/suffix ≤16 (≤1.12.2), components (1.13+)</td><td><span class="b b-ver">version-dep</span></td></tr>
     <tr><td>Scoreboard</td><td>objective ≤ <span class="num">16</span> chars; score holder ≤ <span class="num">40</span></td><td><span class="b b-van">vanilla</span></td></tr>
-    <tr><td>Client Settings</td><td>locale ≤ <span class="num">16</span> chars; view distance VarInt (vanilla clamps 0–32)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Client Information</td><td>locale ≤ <span class="num">16</span> chars; view distance VarInt (vanilla clamps 0–32)</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>Tab-complete command</td><td>≤ <span class="num">256</span> chars (≤1.19.2) / <span class="num">32,500</span> style caps later</td><td><span class="b b-ver">version-dep</span></td></tr>
     <tr><td>Resource Pack (serverbound response)</td><td>UUID (1.17+) + status VarInt 0–5; URL ≤ <span class="num">32,767</span> clientbound; SHA-1 hash = 40 hex chars or empty</td><td><span class="b b-ver">version-dep</span></td></tr>
     <tr><td>KeepAlive</td><td>Long id; must match server’s value</td><td><span class="b b-wire">wire</span></td></tr>
     <tr><td>Click Container state id</td><td>Server rejects stale state ids (desync → dupe/kick)</td><td><span class="b b-van">vanilla</span></td></tr>
     <tr><td>Click Container slot</td><td><code>-999</code> = outside drop; invalid slot → exception</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>JSON Text Component <span class="b b-new">confirmed live</span></td><td>decode ceiling <span class="num">262,144</span> chars; vanilla refuses to <i>encode</i> beyond <span class="num">32,767</span> (possibly a bug in the reference implementation — treat the lower number as authoritative)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Identifier <span class="b b-new">confirmed live</span></td><td>≤ <span class="num">32,767</span> chars, charset <code>[a-z0-9_.-]</code> (namespace) / <code>[a-z0-9_.-/]</code> (value)</td><td><span class="b b-wire">wire</span></td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ REGISTRY & INLINE TYPES ============ -->
+<section id="registry">
+  <h2>Registry references &amp; inline data types <span class="b b-new">confirmed live</span></h2>
+  <p>Newer protocol versions (1.20.5+) heavily use these composite types to let the server either point at a
+     registry entry by ID or embed a value inline. They show up in recipes, sounds, item components and
+     particle definitions — validate both branches, since a malformed inline branch is the more common crash source.</p>
+  <h3><code>ID or X</code></h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td>ID</td><td><code>VarInt</code></td><td><span class="num">0</span> if an inline value of type X follows; otherwise <code>registry ID + 1</code></td></tr>
+    <tr><td>Value</td><td><code>Optional</code> X</td><td>present only when ID is 0</td></tr>
+  </tbody></table>
+  <h3><code>ID Set</code></h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Meaning</th></tr></thead><tbody>
+    <tr><td>Type</td><td><code>VarInt</code></td><td><span class="num">0</span> = a named tag reference follows; any other value N = an inline enumerated set of <code>N − 1</code> IDs</td></tr>
+    <tr><td>Tag Name</td><td><code>Optional Identifier</code></td><td>present only if Type is 0</td></tr>
+    <tr><td>IDs</td><td><code>Optional Array of VarInt</code></td><td>present only if Type is not 0; length equals <code>Type − 1</code> — validate the array's actual length matches before trusting Type</td></tr>
+  </tbody></table>
+  <h3><code>Sound Event</code></h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Sound Name</td><td><code>Identifier</code></td><td>≤32,767 chars per Identifier rules</td></tr>
+    <tr><td>Has Fixed Range</td><td><code>Boolean</code></td><td>—</td></tr>
+    <tr><td>Fixed Range</td><td><code>Optional Float</code></td><td>present only if Has Fixed Range is true; reject NaN/Infinity/negative</td></tr>
+  </tbody></table>
+  <h3><code>Chat Type</code> decoration</h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Translation Key</td><td><code>String</code></td><td>bound to a sane max even though no explicit cap is documented</td></tr>
+    <tr><td>Parameters</td><td><code>Prefixed Array of VarInt Enum</code></td><td>values: 0=sender, 1=target, 2=content — reject anything else</td></tr>
+    <tr><td>Style</td><td><code>NBT</code></td><td>bound depth/size like any other NBT payload</td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ TELEPORT FLAGS & LIGHT DATA ============ -->
+<section id="teleport-light">
+  <h2>Teleport Flags &amp; Light Data <span class="b b-new">confirmed live</span></h2>
+  <h3>Teleport Flags (Int bit field)</h3>
+  <p>Lower 8 bits: a set bit means that axis is <i>relative</i> to the entity's current value; unset means <i>absolute</i>.</p>
+  <table><thead><tr><th>Hex mask</th><th>Field</th></tr></thead><tbody>
+    <tr><td><code>0x0001</code></td><td>Relative X</td></tr>
+    <tr><td><code>0x0002</code></td><td>Relative Y</td></tr>
+    <tr><td><code>0x0004</code></td><td>Relative Z</td></tr>
+    <tr><td><code>0x0008</code></td><td>Relative Yaw</td></tr>
+    <tr><td><code>0x0010</code></td><td>Relative Pitch</td></tr>
+    <tr><td><code>0x0020</code></td><td>Relative Velocity X</td></tr>
+    <tr><td><code>0x0040</code></td><td>Relative Velocity Y</td></tr>
+    <tr><td><code>0x0080</code></td><td>Relative Velocity Z</td></tr>
+    <tr><td><code>0x0100</code></td><td>Rotate the velocity change according to the rotation change in the same packet, applied <i>before</i> the velocity change itself</td></tr>
+  </tbody></table>
+  <div class="def">Any bits set outside <code>0x01FF</code> are undefined for this Int — mask and ignore, don't propagate unknown bits into physics code.</div>
+  <h3>Light Data</h3>
+  <p>Sent with chunk packets; four BitSets gate which of the per-section light arrays are present.</p>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Sky Light Mask / Block Light Mask</td><td><code>BitSet</code> × 2</td><td>one bit per 16×16×16 section in the world, plus 2 (one section below/above the world)</td></tr>
+    <tr><td>Empty Sky Light Mask / Empty Block Light Mask</td><td><code>BitSet</code> × 2</td><td>marks sections whose light data is all-zero (so no array is sent for them)</td></tr>
+    <tr><td>Sky Light arrays / Block Light arrays</td><td><code>Prefixed Array</code> of <code>Prefixed Array(2048)</code> of <code>Byte</code></td><td>each inner array is <b>always exactly 2048 bytes</b> (half a byte per light value across a 16×16×16 section) — reject any inner array whose declared length isn't 2048</td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ GAME PROFILE ============ -->
+<section id="profile">
+  <h2>Game Profile &amp; Resolvable Profile <span class="b b-new">confirmed live</span></h2>
+  <p>These carry player identity/skin data and appear in Login Success, Player Info Update, and profile-bearing
+     item components (player heads, resolvable text-component profiles). The field limits below are exact
+     per-field caps worth enforcing directly, since an oversized Properties array is a cheap broadcast-amplification vector.</p>
+  <h3>Game Profile</h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Limit</th></tr></thead><tbody>
+    <tr><td>UUID</td><td><code>UUID</code></td><td>16 bytes</td></tr>
+    <tr><td>Username</td><td><code>String</code></td><td>≤ <span class="num">16</span> chars</td></tr>
+    <tr><td>Properties</td><td><code>Prefixed Array</code></td><td>≤ <span class="num">16</span> entries; each entry: Name (String ≤64), Value (String ≤32,767), Signature (Prefixed Optional String ≤1,024)</td></tr>
+  </tbody></table>
+  <p>An empty Properties array is valid — the client falls back to a default skin based on UUID. Real accounts
+     typically carry one property named <code>textures</code> whose Value is a base64 JSON blob (the same shape
+     Mojang's session-server API returns).</p>
+  <h3>Resolvable Profile</h3>
+  <table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>Profile Kind</td><td><code>VarInt Enum</code></td><td><span class="num">0</span> = Partial, <span class="num">1</span> = Complete — reject any other value</td></tr>
+    <tr><td>Unpack (Partial)</td><td>see below</td><td>Username: <code>Prefixed Optional String(16)</code>; UUID: <code>Prefixed Optional UUID</code>; Properties: same shape/limits as Game Profile above</td></tr>
+    <tr><td>Unpack (Complete)</td><td><code>Game Profile</code></td><td>full profile inline</td></tr>
+    <tr><td>Body / Cape / Elytra</td><td><code>Prefixed Optional Identifier</code> × 3</td><td>texture overrides from the player's <code>textures</code> resource directory; ≤32,767 chars each per Identifier rules</td></tr>
+    <tr><td>Model</td><td><code>Prefixed Optional VarInt</code></td><td><span class="num">0</span> = WIDE, <span class="num">1</span> = SLIM — reject anything else</td></tr>
   </tbody></table>
 </section>
 
@@ -288,13 +457,195 @@ long x = v >> 38;             // sign-extended automatically
 long y = v << 52 >> 52;       // lowest 12 bits
 long z = v << 26 >> 38;       // middle 26 bits
 
+// Encoding direction:
+// packed = ((x & 0x3FFFFFF) << 38) | ((z & 0x3FFFFFF) << 12) | (y & 0xFFF)
+
 // Angle: 1 byte, 0..255 → 0..360° (step 1.40625)
 float degrees = byteValue * (360f / 256f);
 
 // UUID: two big-endian longs (MSB, LSB) — 16 bytes
 UUID uuid = new UUID(buf.readLong(), buf.readLong());</code></pre>
   <div class="note">Movement packets: vanilla clamps X/Z to ±<span class="num">29,999,984</span> (±3.0E7) and Y to ±<span class="num">2,031</span>
-     on the client; the server should reject NaN/Infinity floats (<code>Float.isFinite</code>) and impossible deltas.</div>
+     on the client; the server should reject NaN/Infinity floats (<code>Float.isFinite</code> / <code>Double.isFinite</code>) and impossible deltas.
+     Note the <code>Position</code> type's own field range (x/z ±33,554,431, y ±2,048) is wider than the movement clamp — validate against the
+     tighter movement bound when checking player-originated coordinates, and against the Position type's bit-width bound when checking
+     block-targeting fields (Query Block Entity Tag, Block Update, etc.).</div>
+</section>
+
+<!-- ============ PACKET ID TABLES ============ -->
+<section id="packetids">
+  <h2>Packet ID tables <span class="b b-new">confirmed live — protocol 776 / 26.2</span></h2>
+  <div class="banner">⚠ The wiki itself warns: <i>packet IDs are valid only for the exact protocol version they're
+    published for and shift as packets are added/removed — never hardcode them without a per-version table.</i>
+    Handshaking/Status/Login/Configuration are small and change rarely; Play is large (127 clientbound + 61
+    serverbound packets at protocol 776) and churns most. Pull an exact, current table from the built-in
+    <a href="https://minecraft.wiki/w/Java_Edition_protocol/Data_types">data generators</a> (<code>--reports</code> flag on the
+    server jar) or PrismarineJS <code>minecraft-data</code> rather than trusting a hardcoded table long-term.</div>
+
+  <h3>Handshaking</h3>
+  <table class="idtbl"><thead><tr><th>ID</th><th>Hex</th><th>Packet</th><th>Official name</th></tr></thead><tbody>
+    <tr><td class="num">0</td><td>0x0</td><td>Handshake (serverbound)</td><td><code>intention</code></td></tr>
+  </tbody></table>
+
+  <h3>Status</h3>
+  <table class="idtbl"><thead><tr><th>Dir</th><th>ID</th><th>Hex</th><th>Packet</th><th>Official name</th></tr></thead><tbody>
+    <tr><td>CB</td><td class="num">0</td><td>0x0</td><td>Status Response</td><td><code>status_response</code></td></tr>
+    <tr><td>CB</td><td class="num">1</td><td>0x1</td><td>Pong Response</td><td><code>pong_response</code></td></tr>
+    <tr><td>SB</td><td class="num">0</td><td>0x0</td><td>Status Request</td><td><code>status_request</code></td></tr>
+    <tr><td>SB</td><td class="num">1</td><td>0x1</td><td>Ping Request</td><td><code>ping_request</code></td></tr>
+  </tbody></table>
+
+  <h3>Login</h3>
+  <table class="idtbl"><thead><tr><th>Dir</th><th>ID</th><th>Hex</th><th>Packet</th><th>Official name</th></tr></thead><tbody>
+    <tr><td>CB</td><td class="num">0</td><td>0x0</td><td>Disconnect (login)</td><td><code>login_disconnect</code></td></tr>
+    <tr><td>CB</td><td class="num">1</td><td>0x1</td><td>Encryption Request</td><td><code>hello</code></td></tr>
+    <tr><td>CB</td><td class="num">2</td><td>0x2</td><td>Login Success</td><td><code>login_finished</code></td></tr>
+    <tr><td>CB</td><td class="num">3</td><td>0x3</td><td>Set Compression</td><td><code>login_compression</code></td></tr>
+    <tr><td>CB</td><td class="num">4</td><td>0x4</td><td>Login Plugin Request</td><td><code>custom_query</code></td></tr>
+    <tr><td>CB</td><td class="num">5</td><td>0x5</td><td>Cookie Request</td><td><code>cookie_request</code></td></tr>
+    <tr><td>SB</td><td class="num">0</td><td>0x0</td><td>Login Start</td><td><code>hello</code></td></tr>
+    <tr><td>SB</td><td class="num">1</td><td>0x1</td><td>Encryption Response</td><td><code>key</code></td></tr>
+    <tr><td>SB</td><td class="num">2</td><td>0x2</td><td>Login Plugin Response</td><td><code>custom_query_answer</code></td></tr>
+    <tr><td>SB</td><td class="num">3</td><td>0x3</td><td>Login Acknowledged</td><td><code>login_acknowledged</code></td></tr>
+    <tr><td>SB</td><td class="num">4</td><td>0x4</td><td>Cookie Response</td><td><code>cookie_response</code></td></tr>
+  </tbody></table>
+
+  <h3>Configuration</h3>
+  <table class="idtbl"><thead><tr><th>Dir</th><th>ID</th><th>Hex</th><th>Packet</th><th>Official name</th></tr></thead><tbody>
+    <tr><td>CB</td><td class="num">0</td><td>0x0</td><td>Cookie Request</td><td><code>cookie_request</code></td></tr>
+    <tr><td>CB</td><td class="num">1</td><td>0x1</td><td>Plugin Message</td><td><code>custom_payload</code></td></tr>
+    <tr><td>CB</td><td class="num">2</td><td>0x2</td><td>Disconnect</td><td><code>disconnect</code></td></tr>
+    <tr><td>CB</td><td class="num">3</td><td>0x3</td><td>Finish Configuration</td><td><code>finish_configuration</code></td></tr>
+    <tr><td>CB</td><td class="num">4</td><td>0x4</td><td>Keep Alive</td><td><code>keep_alive</code></td></tr>
+    <tr><td>CB</td><td class="num">5</td><td>0x5</td><td>Ping</td><td><code>ping</code></td></tr>
+    <tr><td>CB</td><td class="num">6</td><td>0x6</td><td>Reset Chat</td><td><code>reset_chat</code></td></tr>
+    <tr><td>CB</td><td class="num">7</td><td>0x7</td><td>Registry Data</td><td><code>registry_data</code></td></tr>
+    <tr><td>CB</td><td class="num">8</td><td>0x8</td><td>Remove Resource Pack</td><td><code>resource_pack_pop</code></td></tr>
+    <tr><td>CB</td><td class="num">9</td><td>0x9</td><td>Add Resource Pack</td><td><code>resource_pack_push</code></td></tr>
+    <tr><td>CB</td><td class="num">10</td><td>0xA</td><td>Store Cookie</td><td><code>store_cookie</code></td></tr>
+    <tr><td>CB</td><td class="num">11</td><td>0xB</td><td>Transfer</td><td><code>transfer</code></td></tr>
+    <tr><td>CB</td><td class="num">12</td><td>0xC</td><td>Feature Flags</td><td><code>update_enabled_features</code></td></tr>
+    <tr><td>CB</td><td class="num">13</td><td>0xD</td><td>Update Tags</td><td><code>update_tags</code></td></tr>
+    <tr><td>CB</td><td class="num">14</td><td>0xE</td><td>Known Packs</td><td><code>select_known_packs</code></td></tr>
+    <tr><td>CB</td><td class="num">15</td><td>0xF</td><td>Custom Report Details</td><td><code>custom_report_details</code></td></tr>
+    <tr><td>CB</td><td class="num">16</td><td>0x10</td><td>Server Links</td><td><code>server_links</code></td></tr>
+    <tr><td>CB</td><td class="num">17</td><td>0x11</td><td>Clear Dialog</td><td><code>clear_dialog</code></td></tr>
+    <tr><td>CB</td><td class="num">18</td><td>0x12</td><td>Show Dialog</td><td><code>show_dialog</code></td></tr>
+    <tr><td>CB</td><td class="num">19</td><td>0x13</td><td>Code of Conduct</td><td><code>code_of_conduct</code></td></tr>
+    <tr><td>SB</td><td class="num">0</td><td>0x0</td><td>Client Information</td><td><code>client_information</code></td></tr>
+    <tr><td>SB</td><td class="num">1</td><td>0x1</td><td>Cookie Response</td><td><code>cookie_response</code></td></tr>
+    <tr><td>SB</td><td class="num">2</td><td>0x2</td><td>Plugin Message</td><td><code>custom_payload</code></td></tr>
+    <tr><td>SB</td><td class="num">3</td><td>0x3</td><td>Acknowledge Finish Configuration</td><td><code>finish_configuration</code></td></tr>
+    <tr><td>SB</td><td class="num">4</td><td>0x4</td><td>Keep Alive</td><td><code>keep_alive</code></td></tr>
+    <tr><td>SB</td><td class="num">5</td><td>0x5</td><td>Pong</td><td><code>pong</code></td></tr>
+    <tr><td>SB</td><td class="num">6</td><td>0x6</td><td>Resource Pack Response</td><td><code>resource_pack</code></td></tr>
+    <tr><td>SB</td><td class="num">7</td><td>0x7</td><td>Known Packs</td><td><code>select_known_packs</code></td></tr>
+    <tr><td>SB</td><td class="num">8</td><td>0x8</td><td>Custom Click Action</td><td><code>custom_click_action</code></td></tr>
+    <tr><td>SB</td><td class="num">9</td><td>0x9</td><td>Accept Code of Conduct</td><td><code>accept_code_of_conduct</code></td></tr>
+  </tbody></table>
+
+  <h3>Play — clientbound (IDs 0–49 confirmed, protocol 776)</h3>
+  <p>Play has 127 clientbound packets at this protocol version. The first 50 (the ones a bad-packet-id filter
+     hits earliest, since they include Keep Alive, Disconnect and the initial Login packet) are below verbatim
+     from the live table; the remaining 77 are listed by name only further down since packet IDs move around
+     every release and a stale numeric table is worse than none for anticrash purposes.</p>
+  <table class="idtbl"><thead><tr><th>ID</th><th>Hex</th><th>Packet</th><th>Official name</th></tr></thead><tbody>
+    <tr><td class="num">0</td><td>0x0</td><td>Bundle Delimiter</td><td><code>bundle_delimiter</code></td></tr>
+    <tr><td class="num">1</td><td>0x1</td><td>Spawn Entity</td><td><code>add_entity</code></td></tr>
+    <tr><td class="num">2</td><td>0x2</td><td>Entity Animation</td><td><code>animate</code></td></tr>
+    <tr><td class="num">3</td><td>0x3</td><td>Award Statistics</td><td><code>award_stats</code></td></tr>
+    <tr><td class="num">4</td><td>0x4</td><td>Acknowledge Block Change</td><td><code>block_changed_ack</code></td></tr>
+    <tr><td class="num">5</td><td>0x5</td><td>Set Block Destroy Stage</td><td><code>block_destruction</code></td></tr>
+    <tr><td class="num">6</td><td>0x6</td><td>Block Entity Data</td><td><code>block_entity_data</code></td></tr>
+    <tr><td class="num">7</td><td>0x7</td><td>Block Action</td><td><code>block_event</code></td></tr>
+    <tr><td class="num">8</td><td>0x8</td><td>Block Update</td><td><code>block_update</code></td></tr>
+    <tr><td class="num">9</td><td>0x9</td><td>Boss Bar</td><td><code>boss_event</code></td></tr>
+    <tr><td class="num">10</td><td>0xA</td><td>Change Difficulty</td><td><code>change_difficulty</code></td></tr>
+    <tr><td class="num">11</td><td>0xB</td><td>Chunk Batch Finished</td><td><code>chunk_batch_finished</code></td></tr>
+    <tr><td class="num">12</td><td>0xC</td><td>Chunk Batch Start</td><td><code>chunk_batch_start</code></td></tr>
+    <tr><td class="num">13</td><td>0xD</td><td>Chunk Biomes</td><td><code>chunks_biomes</code></td></tr>
+    <tr><td class="num">14</td><td>0xE</td><td>Clear Titles</td><td><code>clear_titles</code></td></tr>
+    <tr><td class="num">15</td><td>0xF</td><td>Command Suggestions Response</td><td><code>command_suggestions</code></td></tr>
+    <tr><td class="num">16</td><td>0x10</td><td>Commands</td><td><code>commands</code></td></tr>
+    <tr><td class="num">17</td><td>0x11</td><td>Close Container</td><td><code>container_close</code></td></tr>
+    <tr><td class="num">18</td><td>0x12</td><td>Set Container Content</td><td><code>container_set_content</code></td></tr>
+    <tr><td class="num">19</td><td>0x13</td><td>Set Container Property</td><td><code>container_set_data</code></td></tr>
+    <tr><td class="num">20</td><td>0x14</td><td>Set Container Slot</td><td><code>container_set_slot</code></td></tr>
+    <tr><td class="num">21</td><td>0x15</td><td>Cookie Request</td><td><code>cookie_request</code></td></tr>
+    <tr><td class="num">22</td><td>0x16</td><td>Set Cooldown</td><td><code>cooldown</code></td></tr>
+    <tr><td class="num">23</td><td>0x17</td><td>Chat Suggestions</td><td><code>custom_chat_completions</code></td></tr>
+    <tr><td class="num">24</td><td>0x18</td><td>Plugin Message</td><td><code>custom_payload</code></td></tr>
+    <tr><td class="num">25</td><td>0x19</td><td>Damage Event</td><td><code>damage_event</code></td></tr>
+    <tr><td class="num">26</td><td>0x1A</td><td>Debug Block Value</td><td><code>debug_block_value</code></td></tr>
+    <tr><td class="num">27</td><td>0x1B</td><td>Debug Chunk Value</td><td><code>debug_chunk_value</code></td></tr>
+    <tr><td class="num">28</td><td>0x1C</td><td>Debug Entity Value</td><td><code>debug_entity_value</code></td></tr>
+    <tr><td class="num">29</td><td>0x1D</td><td>Debug Event</td><td><code>debug_event</code></td></tr>
+    <tr><td class="num">30</td><td>0x1E</td><td>Debug Sample</td><td><code>debug_sample</code></td></tr>
+    <tr><td class="num">31</td><td>0x1F</td><td>Delete Message</td><td><code>delete_chat</code></td></tr>
+    <tr><td class="num">32</td><td>0x20</td><td>Disconnect</td><td><code>disconnect</code></td></tr>
+    <tr><td class="num">33</td><td>0x21</td><td>Disguised Chat Message</td><td><code>disguised_chat</code></td></tr>
+    <tr><td class="num">34</td><td>0x22</td><td>Entity Event</td><td><code>entity_event</code></td></tr>
+    <tr><td class="num">35</td><td>0x23</td><td>Teleport Entity</td><td><code>entity_position_sync</code></td></tr>
+    <tr><td class="num">36</td><td>0x24</td><td>Explosion</td><td><code>explode</code></td></tr>
+    <tr><td class="num">37</td><td>0x25</td><td>Unload Chunk</td><td><code>forget_level_chunk</code></td></tr>
+    <tr><td class="num">38</td><td>0x26</td><td>Game Event</td><td><code>game_event</code></td></tr>
+    <tr><td class="num">39</td><td>0x27</td><td>Game Rule Values</td><td><code>game_rule_values</code></td></tr>
+    <tr><td class="num">40</td><td>0x28</td><td>Game Test Highlight Position</td><td><code>game_test_highlight_pos</code></td></tr>
+    <tr><td class="num">41</td><td>0x29</td><td>Open Horse Screen</td><td><code>mount_screen_open</code></td></tr>
+    <tr><td class="num">42</td><td>0x2A</td><td>Hurt Animation</td><td><code>hurt_animation</code></td></tr>
+    <tr><td class="num">43</td><td>0x2B</td><td>Initialize World Border</td><td><code>initialize_border</code></td></tr>
+    <tr><td class="num">44</td><td>0x2C</td><td>Keep Alive</td><td><code>keep_alive</code></td></tr>
+    <tr><td class="num">45</td><td>0x2D</td><td>Chunk Data and Update Light</td><td><code>level_chunk_with_light</code></td></tr>
+    <tr><td class="num">46</td><td>0x2E</td><td>World Event</td><td><code>level_event</code></td></tr>
+    <tr><td class="num">47</td><td>0x2F</td><td>Particle</td><td><code>level_particles</code></td></tr>
+    <tr><td class="num">48</td><td>0x30</td><td>Update Light</td><td><code>light_update</code></td></tr>
+    <tr><td class="num">49</td><td>0x31</td><td>Login (play)</td><td><code>login</code></td></tr>
+  </tbody></table>
+
+  <details>
+    <summary>Remaining Play clientbound packet names (IDs 50–126, protocol 776) — names only, pull IDs live</summary>
+    <div class="inner">
+      <p>Documented order (not necessarily the numeric ID order, since a few packets like Keep Alive and Disconnect
+        are shared with the Configuration state and interleaved into the ID sequence above): Low Disk Space Warning,
+        Map Data, Merchant Offers, Update Entity Position, Update Entity Position and Rotation, Move Minecart Along
+        Track, Update Entity Rotation, Move Vehicle, Open Book, Open Screen, Open Sign Editor, Place Ghost Recipe,
+        Player Abilities, Player Chat Message, End Combat, Enter Combat, Combat Death, Player Info Remove, Player
+        Info Update, Look At, Synchronize Player Position, Player Rotation, Recipe Book Add, Recipe Book Remove,
+        Recipe Book Settings, Remove Entities, Remove Entity Effect, Reset Score, Respawn, Set Head Rotation,
+        Update Section Blocks, Select Advancements Tab, Server Data, Set Action Bar Text, Set Border Center, Set
+        Border Lerp Size, Set Border Size, Set Border Warning Delay, Set Border Warning Distance, Set Camera, Set
+        Center Chunk, Set Render Distance, Set Cursor Item, Set Default Spawn Position, Display Objective, Set
+        Entity Metadata, Link Entities, Set Entity Velocity, Set Equipment, Set Experience, Set Health, Set Held
+        Item, Update Objectives, Set Passengers, Set Player Inventory Slot, Update Teams, Update Score, Set
+        Simulation Distance, Set Subtitle Text, Update Time, Set Title Text, Set Title Animation Times, Entity
+        Sound Effect, Sound Effect, Start Configuration, Stop Sound, System Chat Message, Set Tab List Header And
+        Footer, Tag Query Response, Pickup Item, Synchronize Vehicle Position, Test Instance Block Status, Set
+        Ticking State, Step Tick, Update Advancements, Update Attributes, Entity Effect, Update Recipes, Projectile
+        Power, Waypoint, Show Dialog.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Play serverbound packet names (61 packets, protocol 776) — names only, pull IDs live</summary>
+    <div class="inner">
+      <p>Documented order: Confirm Teleportation, Attack, Query Block Entity Tag, Bundle Item Selected, Change
+        Difficulty, Change Game Mode, Acknowledge Message, Chat Command, Signed Chat Command, Chat Message, Player
+        Session, Chunk Batch Received, Client Status, Client Tick End, Command Suggestions Request, Acknowledge
+        Configuration, Click Container Button, Click Container, Close Container, Change Container Slot State,
+        Debug Subscription Request, Edit Book, Query Entity Tag, Interact, Jigsaw Generate, Lock Difficulty, Set
+        Player Position, Set Player Position and Rotation, Set Player Rotation, Set Player Movement Flags, Move
+        Vehicle, Paddle Boat, Pick Item From Block, Pick Item From Entity, Place Recipe, Player Abilities, Player
+        Action, Player Command, Player Input, Player Loaded, Change Recipe Book Settings, Set Seen Recipe, Rename
+        Item, Seen Advancements, Select Trade, Set Beacon Effect, Set Held Item, Program Command Block, Program
+        Command Block Minecart, Set Creative Mode Slot, Set Game Rules, Program Jigsaw Block, Program Structure
+        Block, Set Test Block, Update Sign, Spectator Action, Swing Arm, Teleport To Entity, Test Instance Block
+        Action, Use Item On, Use Item.</p>
+      <p class="note" style="margin-top:10px">These are the packets your anticrash most needs bad-packet-id
+        filtering on, since they're 100% attacker-controlled. Cross-reference against a live-generated table for
+        exact IDs — <code>Click Container</code>, <code>Set Creative Mode Slot</code>, <code>Use Item On</code>,
+        and <code>Edit Book</code> are the classic dupe/crash targets among them.</p>
+    </div>
+  </details>
 </section>
 
 <!-- ============ VECTORS ============ -->
@@ -306,7 +657,7 @@ UUID uuid = new UUID(buf.readLong(), buf.readLong());</code></pre>
     <div class="card"><h3>Negative / huge array length 🔴</h3><p><code>new byte[negative]</code> → NegativeArraySizeException; <code>new byte[huge]</code> → OOM before reading.</p>
       <div class="def">check length ≥ 0 <b>and</b> length ≤ <code>buf.readableBytes()</code> (or a sane cap) <i>before</i> allocating.</div></div>
     <div class="card"><h3>Decompression bomb 💣</h3><p>Tiny packet inflates to gigabytes → OOM/CPU burn.</p>
-      <div class="def">cap uncompressed size at <span class="num">2,097,152</span> like vanilla; cap compressed:uncompressed ratio and total inflate rate per connection.</div></div>
+      <div class="def">cap uncompressed size at <span class="num">2,097,151</span> (clientbound) / <span class="num">8,388,608</span> (serverbound) like vanilla; cap compressed:uncompressed ratio and total inflate rate per connection.</div></div>
     <div class="card"><h3>Book ban 📚</h3><p>Oversized book pages/signs/item names are broadcast → client-side OOM/crash + log spam.</p>
       <div class="def">enforce title ≤32, ≤100 pages, page byte cap, and total component size on <b>all</b> broadcast paths (Set Container Content, Creative Slot included).</div></div>
     <div class="card"><h3>Invalid UTF-8 / chat JSON</h3><p>Decoder exceptions or garbage components reaching other clients.</p>
@@ -314,7 +665,7 @@ UUID uuid = new UUID(buf.readLong(), buf.readLong());</code></pre>
     <div class="card"><h3>Entity metadata type mismatch</h3><p>Unknown type id or truncated value → client ArrayIndexOutOfBounds.</p>
       <div class="def">validate type id against the version table + terminator 0xFF present.</div></div>
     <div class="card"><h3>Chunk palette crash</h3><p>Bad bits-per-block / palette size / light arrays crash the client.</p>
-      <div class="def">server-side plugins rarely need this; proxy authors: validate palette bounds per version.</div></div>
+      <div class="def">server-side plugins rarely need this; proxy authors: validate palette bounds per version, and that each light array is exactly 2048 bytes.</div></div>
     <div class="card"><h3>Brigadier / command crash</h3><p>Malformed command node trees or absurd parse depth.</p>
       <div class="def">cap command length (32500/256) and Brigadier parse depth; strip unknown node types.</div></div>
     <div class="card"><h3>Invalid click/slot state</h3><p>Stale state id or out-of-range slot → exceptions, dupes.</p>
@@ -329,7 +680,51 @@ UUID uuid = new UUID(buf.readLong(), buf.readLong());</code></pre>
       <div class="def">reject <code>\0</code> when not behind a proxy; whitelist intents; length checks.</div></div>
     <div class="card"><h3>Resource pack loop (1.17 era)</h3><p>Server resends pack on decline → client stuck/loop.</p>
       <div class="def">cap resends per join; honor <code>declined</code> state per UUID.</div></div>
+    <div class="card"><h3>Oversized Game Profile Properties</h3><p>A resolvable profile or player-head item with a bloated Properties array is a cheap client-side amplification target.</p>
+      <div class="def">enforce ≤16 properties, name ≤64, value ≤32,767, signature ≤1,024 on every profile-bearing packet, not just Login Success.</div></div>
+    <div class="card"><h3>ID Set / ID or X type confusion</h3><p>A Type/ID discriminator that doesn't match the branch actually present desyncs the parser mid-packet, corrupting every field that follows.</p>
+      <div class="def">validate the discriminator value <i>and</i> that the following bytes match the branch it implies before trusting downstream fields.</div></div>
   </div>
+</section>
+
+<!-- ============ NETTY ============ -->
+<section id="netty">
+  <h2>Netty <code>ByteBuf</code> reference <span class="b b-new">confirmed live</span></h2>
+  <p>Netty's <code>ByteBuf</code> is the buffer type every Minecraft packet decoder is built on top of. It has
+     <b>no built-in VarInt/VarLong</b> — those are layered on <code>readByte()</code> by the game itself — but it
+     does give you the primitive index model, bounds-checked accessors, and reference counting that anticrash
+     guard code leans on. Reference: <a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">Netty 4.0 ByteBuf javadoc</a>.</p>
+
+  <h3>The three-region buffer model</h3>
+  <p>Every <code>ByteBuf</code> tracks two cursors, <code>readerIndex</code> and <code>writerIndex</code>, which
+     always satisfy <code>0 ≤ readerIndex ≤ writerIndex ≤ capacity</code>. Anything named <code>read*</code>/<code>skip*</code>
+     consumes from <code>readerIndex</code> forward; anything named <code>write*</code> appends at <code>writerIndex</code>;
+     anything named <code>get*</code>/<code>set*</code> is absolute-indexed and touches neither cursor.</p>
+  <div class="diagram">0            readerIndex            writerIndex             capacity
+|-- discarded --|------ readable (content) ------|------ writable ------|
+     (already            ^ read*/skip* pulls          ^ write* appends
+      consumed)            from here forward             here forward</div>
+  <div class="note">Reading past <code>writerIndex</code> or writing past <code>capacity</code> both throw
+     <code>IndexOutOfBoundsException</code> rather than silently returning garbage — always let that exception
+     propagate to a "truncated packet" kick instead of catching and continuing with a partially-read buffer.</div>
+
+  <h3>Full method reference, by category</h3>
+  <table><thead><tr><th>Category</th><th>Methods</th><th>Anticrash notes</th></tr></thead><tbody>
+    <tr><td>Capacity / allocation</td><td><code>capacity()</code>, <code>capacity(int)</code>, <code>maxCapacity()</code>, <code>alloc()</code>, <code>isDirect()</code>, <code>order()</code>, <code>order(ByteOrder)</code>, <code>unwrap()</code></td><td><code>capacity(int newCapacity)</code> truncates if shrunk and pads with unspecified bytes if grown — never grow a buffer to "make room" for a length you haven't validated yet</td></tr>
+    <tr><td>Index management</td><td><code>readerIndex()</code>/<code>(int)</code>, <code>writerIndex()</code>/<code>(int)</code>, <code>setIndex(int,int)</code>, <code>readableBytes()</code>, <code>writableBytes()</code>, <code>maxWritableBytes()</code>, <code>isReadable()</code>/<code>(int)</code>, <code>isWritable()</code>/<code>(int)</code>, <code>clear()</code></td><td><code>readableBytes()</code> is your #1 guard before any read; check it before every length-prefixed field, not just once at the top of the packet</td></tr>
+    <tr><td>Mark / reset</td><td><code>markReaderIndex()</code>, <code>resetReaderIndex()</code>, <code>markWriterIndex()</code>, <code>resetWriterIndex()</code></td><td>rewind cleanly when a peeked field fails validation, instead of manually recomputing an index</td></tr>
+    <tr><td>Compaction</td><td><code>discardReadBytes()</code>, <code>discardSomeReadBytes()</code></td><td>reclaims the discarded region in a long-lived accumulator buffer; content of the freed writable region is <b>not guaranteed zeroed</b></td></tr>
+    <tr><td>Growth</td><td><code>ensureWritable(int)</code>, <code>ensureWritable(int, boolean)</code></td><td>throws (or returns a status code in the 2-arg form) rather than growing past <code>maxCapacity()</code> — set <code>maxCapacity</code> at allocation time to your protocol's hard packet cap</td></tr>
+    <tr><td>Absolute get (indexed, no cursor move)</td><td><code>getBoolean/Byte/UnsignedByte/Short/UnsignedShort/Medium/UnsignedMedium/Int/UnsignedInt/Long/Char/Float/Double(int)</code>, <code>getBytes(int, ...)</code> (ByteBuf/array/NIO buffer/stream/channel destinations)</td><td>use for peeking a length or type tag before committing to a sequential read</td></tr>
+    <tr><td>Absolute set</td><td><code>setBoolean/Byte/Short/Medium/Int/Long/Char/Float/Double(int, value)</code>, <code>setBytes(int, ...)</code>, <code>setZero(int, int)</code></td><td>rarely needed in a decoder; relevant when rewriting a length prefix after re-encoding a sanitized payload</td></tr>
+    <tr><td>Sequential read</td><td><code>readBoolean/Byte/UnsignedByte/Short/UnsignedShort/Medium/UnsignedMedium/Int/UnsignedInt/Long/Char/Float/Double()</code>, <code>readBytes(...)</code> (length/array/ByteBuf/NIO/stream/channel forms), <code>readSlice(int)</code>, <code>skipBytes(int)</code></td><td>the primitives your VarInt/VarLong/String helpers are built on — see the guard code section for wrapping these safely</td></tr>
+    <tr><td>Sequential write</td><td><code>writeBoolean/Byte/Short/Medium/Int/Long/Char/Float/Double(value)</code>, <code>writeBytes(...)</code>, <code>writeZero(int)</code></td><td>—</td></tr>
+    <tr><td>Derived buffers</td><td><code>duplicate()</code>, <code>slice()</code>, <code>slice(int,int)</code>, <code>readSlice(int)</code>, <code>copy()</code>, <code>copy(int,int)</code></td><td><code>slice</code>/<code>duplicate</code> share the backing storage and do <b>not</b> call <code>retain()</code>; <code>copy()</code> is the only one that's fully independent</td></tr>
+    <tr><td>Reference counting</td><td><code>refCnt()</code>, <code>retain()</code>, <code>retain(int)</code>, <code>release()</code>, <code>release(int)</code> (from <code>ReferenceCounted</code>)</td><td>pooled buffers leak memory if under-released and cause use-after-free bugs if over-released — never hold a reference past the handler call that received it without an explicit <code>retain()</code></td></tr>
+    <tr><td>Search</td><td><code>indexOf(int,int,byte)</code>, <code>bytesBefore(byte)</code>, <code>bytesBefore(int,byte)</code>, <code>bytesBefore(int,int,byte)</code>, <code>forEachByte(...)</code>, <code>forEachByteDesc(...)</code></td><td><code>bytesBefore(byte)</code> is the fast path for NUL-terminated fields (e.g. legacy handshake proxy data after <code>\0</code>)</td></tr>
+    <tr><td>Conversion</td><td><code>array()</code>, <code>hasArray()</code>, <code>arrayOffset()</code>, <code>nioBuffer()</code>/<code>(int,int)</code>, <code>nioBuffers()</code>/<code>(int,int)</code>, <code>nioBufferCount()</code>, <code>toString(Charset)</code>, <code>hasMemoryAddress()</code>, <code>memoryAddress()</code></td><td>check <code>hasArray()</code> before calling <code>array()</code> — direct/off-heap buffers throw <code>UnsupportedOperationException</code> otherwise</td></tr>
+    <tr><td>Equality / ordering</td><td><code>equals(Object)</code>, <code>hashCode()</code>, <code>compareTo(ByteBuf)</code></td><td>content-based, not identity-based</td></tr>
+  </tbody></table>
 </section>
 
 <!-- ============ CODE ============ -->
@@ -382,10 +777,11 @@ public static byte[] readByteArray(ByteBuf buf, int max) {
   <h3>Length-prefix + compression guard</h3>
   <pre><code>// in your decoder, before reading a packet:
 int length = readVarInt(in, 3);                       // length prefix ≤ 3 bytes
-if (length > 2_097_152) throw new DecoderException("Packet too large");   // 0x200000
+if (length > 2_097_151) throw new DecoderException("Packet too large");   // 2^21 - 1
 // if compression enabled:
 int dataLength = readVarInt(in, 5);
-if (dataLength > 2_097_152) throw new DecoderException("Badly compressed packet");
+int cap = serverbound ? 8_388_608 : 2_097_151;          // 2^23 serverbound, 2^21-1 clientbound
+if (dataLength > cap) throw new DecoderException("Badly compressed packet");
 // inflate with a bounded output stream (e.g. Inflater with setLimit / counting wrapper)</code></pre>
 
   <h3>Rate limiting sketch (per connection)</h3>
@@ -395,17 +791,6 @@ if (dataLength > 2_097_152) throw new DecoderException("Badly compressed packet"
     if (tokens &lt; 1) return false;                     // false → kick or skip handling
     tokens -= 1; return true;
 }</code></pre>
-
-  <h3>ByteBuf essentials (Netty 4 javadoc)</h3>
-  <table><thead><tr><th>Method</th><th>Use</th></tr></thead><tbody>
-    <tr><td><code>readableBytes()</code></td><td>writerIndex − readerIndex — your #1 guard before any read</td></tr>
-    <tr><td><code>readBoolean/Byte/UnsignedByte/Short/UnsignedShort/Int/Long/Float/Double</code></td><td>primitives, big-endian</td></tr>
-    <tr><td><code>readCharSequence(len, UTF_8)</code> (4.1+)</td><td>string payload</td></tr>
-    <tr><td><code>readSlice(len)</code></td><td>zero-copy view of a region</td></tr>
-    <tr><td><code>readerIndex()/setIndex()</code></td><td>rewind when validation fails</td></tr>
-    <tr><td><code>retain()/release()/refCnt()</code></td><td>reference counting — leaks or use-after-free</td></tr>
-    <tr><td><code>discardReadBytes()</code></td><td>compaction for accumulators</td></tr>
-  </tbody></table>
 
   <h3>Interactive VarInt tool</h3>
   <div class="card">
@@ -424,7 +809,7 @@ if (dataLength > 2_097_152) throw new DecoderException("Badly compressed packet"
 <section id="sources">
   <h2>Sources</h2>
   <table><thead><tr><th>Source</th><th>Link</th></tr></thead><tbody>
-    <tr><td>Minecraft Wiki — wiki.vg merge, Protocol &amp; Data types</td><td><a href="https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol">minecraft.wiki/…/wiki.vg_merge/Protocol</a></td></tr>
+    <tr><td>Minecraft Wiki — Java Edition protocol/Packets (the wiki.vg merge), CC BY-SA 3.0</td><td><a href="https://minecraft.wiki/w/Java_Edition_protocol/Packets">minecraft.wiki/w/Java_Edition_protocol/Packets</a></td></tr>
     <tr><td>Protocol version numbers</td><td><a href="https://minecraft.wiki/w/Protocol_version_numbers">minecraft.wiki/w/Protocol_version_numbers</a></td></tr>
     <tr><td>Classic wiki.vg (archived)</td><td><a href="https://wiki.vg/Protocol">wiki.vg/Protocol</a></td></tr>
     <tr><td>Netty 4.0 ByteBuf javadoc</td><td><a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">netty.io/4.0/api/io/netty/buffer/ByteBuf.html</a></td></tr>
@@ -436,10 +821,12 @@ if (dataLength > 2_097_152) throw new DecoderException("Badly compressed packet"
     <tr><td>Glowstone (clean server-side packet handling)</td><td><a href="https://github.com/GlowstoneMC/Glowstone">github.com/GlowstoneMC/Glowstone</a></td></tr>
   </tbody></table>
   <div class="note">For <span class="b b-ver">version-dep</span> values, diff two versions quickly with PrismarineJS:
-     <code>data/pc/&lt;version&gt;/protocol.json</code> in the minecraft-data repo.</div>
+     <code>data/pc/&lt;version&gt;/protocol.json</code> in the minecraft-data repo. Packet-ID tables above were
+     pulled live from the Minecraft Wiki for protocol 776 (release 26.2) during this update — re-verify against the
+     live page whenever you target a different version.</div>
 </section>
 
-<footer>Built for Minecraft Java Edition anticrash development · values verified against wiki.vg merge + vanilla sources · always re-check version-dependent limits</footer>
+<footer>Built for Minecraft Java Edition anticrash development · values verified against wiki.vg merge (protocol 776 / 26.2) + Netty 4.0 ByteBuf javadoc · always re-check version-dependent limits</footer>
 </main>
 </div>
 
@@ -456,7 +843,7 @@ q.addEventListener('input', () => {
       el.style.display = hit ? '' : 'none';
       if (hit) visible = true;
     });
-    sec.querySelectorAll('pre, .note, .pg').forEach(el => {
+    sec.querySelectorAll('pre, .note, .pg, details').forEach(el => {
       const hit = !v || el.textContent.toLowerCase().includes(v);
       el.style.display = hit ? '' : 'none';
       if (hit) visible = true;
