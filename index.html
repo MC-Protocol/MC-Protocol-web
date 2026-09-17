@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MC Anticrash — Protocol Value Reference</title>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#10161f; --panel2:#151d29; --line:#1f2a38;
+    --text:#dce5ef; --dim:#8ba1b6; --accent:#4cc2ff;
+    --red:#ff6b6b; --orange:#ffb454; --purple:#b48cff; --green:#3fd68f;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif}
+  header{position:sticky;top:0;z-index:50;display:flex;gap:14px;align-items:center;
+    padding:10px 18px;background:rgba(11,15,20,.9);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line)}
+  header .brand{font-weight:700;color:var(--accent);white-space:nowrap}
+  #q{flex:1;max-width:420px;background:var(--panel2);border:1px solid var(--line);
+    color:var(--text);border-radius:8px;padding:8px 12px;outline:none}
+  #q:focus{border-color:var(--accent)}
+  header .hint{color:var(--dim);font-size:12px}
+  .layout{display:flex}
+  aside{width:225px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);
+    overflow-y:auto;padding:16px 10px;border-right:1px solid var(--line)}
+  aside a{display:block;color:var(--dim);text-decoration:none;padding:5px 10px;
+    border-radius:6px;font-size:13px}
+  aside a:hover{background:var(--panel2);color:var(--text)}
+  aside a.active{background:var(--panel2);color:var(--accent)}
+  main{flex:1;min-width:0;padding:20px 26px 80px;max-width:1080px}
+  section{margin-bottom:44px;scroll-margin-top:70px}
+  h1{font-size:26px;margin:6px 0 4px}
+  h2{font-size:19px;margin:0 0 12px;color:var(--accent)}
+  h3{font-size:15px;margin:18px 0 8px}
+  p{color:var(--dim)}
+  code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+    padding:1px 5px;font:12.5px ui-monospace,Consolas,monospace;color:#cfe6ff}
+  pre{position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:10px;padding:14px 14px 12px;overflow-x:auto;margin:10px 0}
+  pre code{background:none;border:none;padding:0;color:#cfe6ff;
+    font:12.5px/1.6 ui-monospace,Consolas,monospace}
+  .copy{position:absolute;top:8px;right:8px;background:var(--panel2);
+    color:var(--dim);border:1px solid var(--line);border-radius:6px;
+    font-size:11px;padding:3px 9px;cursor:pointer}
+  .copy:hover{color:var(--accent);border-color:var(--accent)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px}
+  th,td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:none}
+  td code{white-space:nowrap}
+  .num{font-family:ui-monospace,Consolas,monospace;color:var(--green)}
+  .b{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 8px;
+    border-radius:20px;border:1px solid;vertical-align:middle;margin-left:6px}
+  .b-wire{color:var(--accent);border-color:var(--accent)}
+  .b-van{color:var(--orange);border-color:var(--orange)}
+  .b-ver{color:var(--purple);border-color:var(--purple)}
+  .b-impl{color:var(--dim);border-color:var(--dim)}
+  .b-dgr{color:var(--red);border-color:var(--red)}
+  .banner{background:#1d1418;border:1px solid #5b2733;border-left:4px solid var(--red);
+    border-radius:10px;padding:12px 16px;margin:14px 0;color:#f3c9c9}
+  .note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:10px;padding:10px 14px;margin:12px 0;color:var(--dim);font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .card h3{margin:0 0 6px;font-size:14px}
+  .card p{margin:6px 0 0;font-size:13px}
+  .def{color:var(--green);font-size:12.5px;margin-top:6px}
+  .def::before{content:"⛨ Defense: ";color:var(--dim)}
+  a{color:var(--accent)}
+  .pg{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:10px}
+  .pg input{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:7px 10px;font-family:ui-monospace,monospace;outline:none}
+  .pg .out{font-family:ui-monospace,monospace;color:var(--green)}
+  footer{color:var(--dim);font-size:12px;padding:20px;border-top:1px solid var(--line);text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">⛏ MC Protocol Values — Anticrash Reference</div>
+  <input id="q" type="search" placeholder="Filter… try: varint, book, 2097152, compression">
+  <span class="hint">Java Edition · wiki.vg merge + Netty ByteBuf</span>
+</header>
+
+<div class="layout">
+<aside>
+  <nav id="sidenav">
+    <a href="#intro">Overview</a>
+    <a href="#versions">Protocol versions</a>
+    <a href="#framing">Packet framing &amp; compression</a>
+    <a href="#types">Data types</a>
+    <a href="#strings">String &amp; packet limits</a>
+    <a href="#nbt">NBT &amp; components</a>
+    <a href="#items">Item stacks &amp; slots</a>
+    <a href="#metadata">Entity metadata</a>
+    <a href="#position">Position / Angle / UUID</a>
+    <a href="#vectors">Crash &amp; exploit vectors</a>
+    <a href="#code">Netty guard code</a>
+    <a href="#sources">Sources</a>
+  </nav>
+</aside>
+
+<main>
+
+<!-- ============ INTRO ============ -->
+<section id="intro">
+  <h1>Minecraft Protocol Values for Anticrash Development</h1>
+  <p>A single-page reference of every wire-format constant, vanilla-enforced packet limit and known
+     crash vector used when writing server-side validation (anticrash) for Minecraft Java Edition.
+     Built from the <a href="https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol">Minecraft&nbsp;Wiki wiki.vg merge</a>,
+     the <a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">Netty 4 ByteBuf javadoc</a>, PrismarineJS
+     <code>minecraft-data</code>, MCProtocolLib and ViaVersion sources.</p>
+  <div class="banner">⚠ <b>Read this first:</b> numbers marked <span class="b b-wire">wire</span> are protocol constants;
+    <span class="b b-van">vanilla</span> are enforced by the vanilla server/client (safe baselines for kicks);
+    <span class="b b-ver">version-dep</span> changed between releases — always re-check per protocol version in the links below.
+    These are defensive limits, not guaranteed constants.</div>
+</section>
+
+<!-- ============ VERSIONS ============ -->
+<section id="versions">
+  <h2>Protocol version numbers <span class="b b-ver">verify latest</span></h2>
+  <table><thead><tr><th>Minecraft</th><th>Protocol</th><th>Notes</th></tr></thead><tbody>
+    <tr><td>1.8 – 1.8.9</td><td class="num">47</td><td>Pre-Thermos era, no “states” before 1.13</td></tr>
+    <tr><td>1.12.2</td><td class="num">340</td><td>Common legacy target</td></tr>
+    <tr><td>1.16.5</td><td class="num">754</td><td>Chat signing era begins 1.19</td></tr>
+    <tr><td>1.17.1</td><td class="num">756</td><td>Resource pack hash/loop issues</td></tr>
+    <tr><td>1.18.2</td><td class="num">758</td><td>Heightened world height (−64..319)</td></tr>
+    <tr><td>1.19.2 / 1.19.4</td><td class="num">760 / 762</td><td>Signed chat commands</td></tr>
+    <tr><td>1.20 – 1.20.1</td><td class="num">763</td><td>1.20.1 shares 763</td></tr>
+    <tr><td>1.20.2</td><td class="num">764</td><td><b>Configuration state added</b>, network NBT root-name omitted</td></tr>
+    <tr><td>1.20.3 – 1.20.4</td><td class="num">765</td><td>Text components become NBT on the wire</td></tr>
+    <tr><td>1.20.5 – 1.20.6</td><td class="num">766</td><td><b>Item components replace NBT items</b>, Transfer intent (3)</td></tr>
+    <tr><td>1.21 – 1.21.1</td><td class="num">767</td><td>1.21.1 shares 767</td></tr>
+    <tr><td>1.21.2 – 1.21.3</td><td class="num">768</td><td>Metadata types change again</td></tr>
+    <tr><td>1.21.4</td><td class="num">769</td><td>—</td></tr>
+    <tr><td>1.21.5</td><td class="num">770</td><td>—</td></tr>
+    <tr><td>1.21.6</td><td class="num">771</td><td>—</td></tr>
+    <tr><td>1.21.7 – 1.21.8</td><td class="num">772</td><td>1.21.8 shares 772</td></tr>
+    <tr><td>1.21.9 / 1.21.10+</td><td class="num">773 / 774</td><td class="b b-ver">version-dep — confirm on the wiki page below</td></tr>
+  </tbody></table>
+  <div class="note">Anticrash rule of thumb: validate against <i>ranges</i> (max sizes, bit widths, enum bounds) that hold
+    across many versions, and keep a small per-version table for the ones that shift (book/sign/metadata).</div>
+</section>
+
+<!-- ============ FRAMING ============ -->
+<section id="framing">
+  <h2>Packet framing &amp; compression</h2>
+  <table><thead><tr><th>Field</th><th>Value</th><th>Kind</th></tr></thead><tbody>
+    <tr><td>Packet length prefix</td><td><code>VarInt</code>, must fit in <span class="num">3</span> bytes (max <span class="num">2,097,151</span>)</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Max packet size (vanilla decoder)</td><td><span class="num">2,097,152</span> = <code>0x200000</code> → else kicked</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>“VarInt is too big”</td><td>Vanilla error when length VarInt exceeds 3 bytes</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>“Bad packet id”</td><td>Kick when Packet ID VarInt is unknown for the state</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Compression (Set Compression, login)</td><td>Threshold <code>VarInt</code> ≥ 0; vanilla default <span class="num">256</span></td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Compressed framing</td><td>Len | DataLength VarInt (0 = below threshold, raw) | zlib</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>“Badly compressed packet”</td><td>Uncompressed size &gt; <span class="num">2,097,152</span> → kick</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>States</td><td>Handshake → Status / Login → <b>Config (1.20.2+)</b> → Play</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Handshake next-state intents</td><td><span class="num">1</span>=Status, <span class="num">2</span>=Login, <span class="num">3</span>=Transfer (1.20.5+)</td><td><span class="b b-wire">wire</span></td></tr>
+  </tbody></table>
+  <h3>Anticrash framing checks</h3>
+  <p>Reject: length VarInt &gt; 3 bytes · length &gt; 0x200000 · DataLength &gt; 0x200000 ·
+     zlib output exceeding its declared size · packets arriving before Set Compression · unknown intent ≠ 1/2/3.</p>
+</section>
+
+<!-- ============ DATA TYPES ============ -->
+<section id="types">
+  <h2>Data types <span class="b b-wire">wire</span></h2>
+  <p>All multi-byte values are <b>big-endian</b>. This is what a Netty <code>ByteBuf</code> gives you natively;
+     VarInt/VarLong, strings and structures are Minecraft’s own layer.</p>
+  <table><thead><tr><th>Type</th><th>Size</th><th>Range / encoding</th></tr></thead><tbody>
+    <tr><td><code>Boolean</code></td><td class="num">1</td><td><code>0x00</code>=false, anything else true (read <code>readBoolean</code>)</td></tr>
+    <tr><td><code>Byte</code> / <code>Unsigned Byte</code></td><td class="num">1</td><td>−128..127 / 0..255</td></tr>
+    <tr><td><code>Short</code> / <code>Unsigned Short</code></td><td class="num">2</td><td>−32,768..32,767 / 0..65,535</td></tr>
+    <tr><td><code>Int</code> / <code>Unsigned Int</code></td><td class="num">4</td><td>−2³¹..2³¹−1 / 0..2³²−1</td></tr>
+    <tr><td><code>Long</code></td><td class="num">8</td><td>−2⁶³..2⁶³−1</td></tr>
+    <tr><td><code>Float</code> / <code>Double</code></td><td class="num">4 / 8</td><td>IEEE-754, big-endian</td></tr>
+    <tr><td><code>VarInt</code></td><td class="num">1–5</td><td>LEB128: 7 data bits + MSB continuation. 32-bit two’s complement — negatives always use 5 bytes. Vanilla errors past 5 bytes / 32 bits.</td></tr>
+    <tr><td><code>VarLong</code></td><td class="num">1–10</td><td>Same scheme, 64-bit. Max 10 bytes.</td></tr>
+    <tr><td><code>String</code> (n)</td><td class="num">1+n</td><td>VarInt <b>byte</b> length prefix (max 3,276,715 encodable; vanilla caps per packet) + UTF-8 bytes</td></tr>
+    <tr><td><code>Identifier</code></td><td class="num">1+n</td><td>Namespaced string <code>minecraft:foo_bar</code>, charset <code>[a-z0-9_.-]:/[a-z0-9_.-/]</code></td></tr>
+    <tr><td><code>Text Component</code></td><td class="num">var</td><td>1.20.3+: <b>NBT</b> (string or compound). Before: String containing JSON</td></tr>
+    <tr><td><code>Position</code></td><td class="num">8</td><td>Long: <code>X(26) | Z(26) | Y(12)</code>, sign-extended (see Position section)</td></tr>
+    <tr><td><code>Angle</code></td><td class="num">1</td><td>0..255 = 0..360° (step 1.40625°)</td></tr>
+    <tr><td><code>UUID</code></td><td class="num">16</td><td>Two big-endian longs (MSB, LSB)</td></tr>
+    <tr><td><code>Byte Array</code></td><td class="num">1+n</td><td>VarInt length + raw bytes — <b>primary OOM vector</b>, see code section</td></tr>
+    <tr><td><code>NBT</code></td><td class="num">var</td><td>Network NBT (see NBT section)</td></tr>
+    <tr><td><code>Bit Set</code></td><td class="num">var</td><td>VarInt long-count + that many Longs</td></tr>
+    <tr><td><code>Optional X</code></td><td class="num">1+n</td><td>Boolean present? + X if true</td></tr>
+    <tr><td><code>Array of X</code></td><td class="num">1+n</td><td>VarInt count + entries — validate count ≥ 0 and ≤ remaining bytes</td></tr>
+    <tr><td><code>Entity Metadata</code></td><td class="num">var</td><td>Entries until terminator <code>0xFF</code> (see Metadata section)</td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ STRING LIMITS ============ -->
+<section id="strings">
+  <h2>String &amp; packet-level limits</h2>
+  <table><thead><tr><th>Packet / field</th><th>Limit</th><th>Kind</th></tr></thead><tbody>
+    <tr><td><b>Chat message</b> (serverbound)</td><td>≤ <span class="num">256</span> chars; must not start with <code>/</code></td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td><b>Chat command</b> (serverbound)</td><td>≤ <span class="num">256</span> (1.19–1.19.2) · ≤ <span class="num">32,500</span> (1.19.3+)</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>Signed chat arguments</td><td>≤ <span class="num">8</span> signed arguments (1.19.1–1.19.3)</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>Chat signature byte array</td><td>≤ <span class="num">256</span> bytes</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td><b>Login Start username</b></td><td>≤ <span class="num">16</span> chars (profile rule: 3–16, <code>[A-Za-z0-9_]</code>)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td><b>Handshake server address</b></td><td>≤ <span class="num">255</span> chars; may contain proxy data after <code>\0</code> (BungeeCord/Velocity)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Handshake port</td><td><code>Unsigned Short</code> 0–65,535</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td><b>Plugin message / Custom Payload</b></td><td>channel ≤ <span class="num">256</span> chars (legacy) / Identifier (modern); data ≤ <span class="num">32,767</span> serverbound · ≤ <span class="num">1,048,576</span> clientbound</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Brand payload (<code>minecraft:brand</code>)</td><td>≤ <span class="num">64</span> chars</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td><b>Edit Book</b></td><td>title ≤ <span class="num">32</span> chars · ≤ <span class="num">100</span> pages · page ≤ <span class="num">1,024</span> chars (≤1.20.4) / <span class="num">8,192</span> bytes (1.20.5+)</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td><b>Update Sign</b></td><td>≤ <span class="num">45</span> chars × 4 lines (≤1.19.4); 1.20+: 4 text components — enforce component size</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>Anvil rename</td><td>≤ <span class="num">50</span> chars</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Team name</td><td>≤ <span class="num">16</span> chars; prefix/suffix ≤16 (≤1.12.2), components (1.13+)</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>Scoreboard</td><td>objective ≤ <span class="num">16</span> chars; score holder ≤ <span class="num">40</span></td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Client Settings</td><td>locale ≤ <span class="num">16</span> chars; view distance VarInt (vanilla clamps 0–32)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Tab-complete command</td><td>≤ <span class="num">256</span> chars (≤1.19.2) / <span class="num">32,500</span> style caps later</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>Resource Pack (serverbound response)</td><td>UUID (1.17+) + status VarInt 0–5; URL ≤ <span class="num">32,767</span> clientbound; SHA-1 hash = 40 hex chars or empty</td><td><span class="b b-ver">version-dep</span></td></tr>
+    <tr><td>KeepAlive</td><td>Long id; must match server’s value</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Click Container state id</td><td>Server rejects stale state ids (desync → dupe/kick)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Click Container slot</td><td><code>-999</code> = outside drop; invalid slot → exception</td><td><span class="b b-wire">wire</span></td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ NBT ============ -->
+<section id="nbt">
+  <h2>NBT &amp; components</h2>
+  <table><thead><tr><th>Property</th><th>Value</th><th>Kind</th></tr></thead><tbody>
+    <tr><td>Tag ids</td><td><span class="num">0</span>=End … 12=Long Array (compound/list/primitives as on wiki)</td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Network NBT (1.20.2+)</td><td>Root compound’s <b>name is omitted</b>; strings use <b>Modified UTF-8</b></td><td><span class="b b-wire">wire</span></td></tr>
+    <tr><td>Max NBT depth</td><td><span class="num">512</span> levels (vanilla)</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Text components (1.20.3+)</td><td>NBT on the wire; recursion depth &amp; size must be bounded when validating</td><td><span class="b b-van">vanilla</span></td></tr>
+    <tr><td>Item components (1.20.5+)</td><td>Each component = VarInt type + NBT-like payload; added/removed lists on items (see Items)</td><td><span class="b b-wire">wire</span></td></tr>
+  </tbody></table>
+  <div class="note">Anticrash: when re-serializing client NBT (books, signs, item names), bound <b>depth ≤ 512</b>,
+     <b>total serialized size</b>, <b>list sizes</b> and <b>duplicate keys</b>. Deep recursion = StackOverflow; huge payloads = “book ban”.</div>
+</section>
+
+<!-- ============ ITEMS ============ -->
+<section id="items">
+  <h2>Item stacks &amp; slots</h2>
+  <h3>Slot format (1.20.5+)</h3>
+  <pre><code>Slot:
+  present: Boolean
+  if present:
+    count:    VarInt          (empty stack on the wire = present=false, i.e. count 0)
+    itemId:   VarInt          (registry id — must exist!)
+    addedComponents:   VarInt count, then (type VarInt + payload) pairs
+    removedComponents: VarInt count, then VarInt ids</code></pre>
+  <p>Pre-1.20.5: <code>count: Byte</code> (≤0 = air), <code>item: VarInt</code>, <code>nbt: Optional NBT</code>.</p>
+  <h3>Rules to enforce</h3>
+  <table><thead><tr><th>Check</th><th>Why</th></tr></thead><tbody>
+    <tr><td><code>itemId</code> must exist in the version registry</td><td>Unknown id → server exception</td></tr>
+    <tr><td>count <span class="num">0</span> ⇒ treat as empty, skip parsing components</td><td>Air with components is invalid</td></tr>
+    <tr><td>Component count bounded (e.g. ≤ 256) and total size bounded</td><td>Huge components broadcast → client crashes (“item ban”)</td></tr>
+    <tr><td>Creative slot packet: slot may be negative — validate per version, don’t blanket-reject</td><td>−1 is “drop item”, other negatives carry meaning</td></tr>
+    <tr><td>Click slot −999 valid, others within window bounds + player inventory</td><td>Dupe / crash via invalid slots</td></tr>
+    <tr><td>Window/state ids must match server state</td><td>Desync exploits</td></tr>
+  </tbody></table>
+</section>
+
+<!-- ============ METADATA ============ -->
+<section id="metadata">
+  <h2>Entity metadata</h2>
+  <pre><code>Metadata entry (repeat until terminator):
+  index: Unsigned Byte (0..0xFE)
+  type:  VarInt          (index into the version’s type table)
+  value: depends on type
+Terminator: 0xFF</code></pre>
+  <p>Core type ids (stable across 1.20.5–1.21.x; higher ids are version-specific — pull the full table
+     from the wiki or PrismarineJS <code>protocol.json</code>):</p>
+  <table><thead><tr><th>Id</th><th>Type</th><th>Id</th><th>Type</th></tr></thead><tbody>
+    <tr><td class="num">0</td><td>Byte</td><td class="num">7</td><td>Item Stack</td></tr>
+    <tr><td class="num">1</td><td>VarInt</td><td class="num">8</td><td>Boolean</td></tr>
+    <tr><td class="num">2</td><td>VarLong</td><td class="num">9</td><td>Rotations (3×Float)</td></tr>
+    <tr><td class="num">3</td><td>Float</td><td class="num">10</td><td>Position</td></tr>
+    <tr><td class="num">4</td><td>String</td><td class="num">11</td><td>Optional Position</td></tr>
+    <tr><td class="num">5</td><td>Text Component</td><td class="num">12</td><td>Direction (VarInt)</td></tr>
+    <tr><td class="num">6</td><td>Optional Text Component</td><td class="num">…</td><td class="b b-ver">version-specific</td></tr>
+  </tbody></table>
+  <div class="note">Anticrash (outbound sanitizing via ProtocolLib/packets): reject unknown type ids, indexes ≥ 0xFE
+     without terminator, and truncated values — invalid metadata crashes <i>clients</i>, not the server.</div>
+</section>
+
+<!-- ============ POSITION ============ -->
+<section id="position">
+  <h2>Position / Angle / UUID</h2>
+  <pre><code>// Position: 8-byte long, since 1.14 — X:26 | Z:26 | Y:12
+long x = v >> 38;             // sign-extended automatically
+long y = v << 52 >> 52;       // lowest 12 bits
+long z = v << 26 >> 38;       // middle 26 bits
+
+// Angle: 1 byte, 0..255 → 0..360° (step 1.40625)
+float degrees = byteValue * (360f / 256f);
+
+// UUID: two big-endian longs (MSB, LSB) — 16 bytes
+UUID uuid = new UUID(buf.readLong(), buf.readLong());</code></pre>
+  <div class="note">Movement packets: vanilla clamps X/Z to ±<span class="num">29,999,984</span> (±3.0E7) and Y to ±<span class="num">2,031</span>
+     on the client; the server should reject NaN/Infinity floats (<code>Float.isFinite</code>) and impossible deltas.</div>
+</section>
+
+<!-- ============ VECTORS ============ -->
+<section id="vectors">
+  <h2>Crash &amp; exploit vectors</h2>
+  <div class="grid">
+    <div class="card"><h3>VarInt too big / overlong 🔴</h3><p>5+ bytes for length prefix, or 32+ bits set.</p>
+      <div class="def">length VarInt ≤ 3 bytes; in-packet VarInt ≤ 5 bytes / 32 bits; reject non-canonical (overlong) encodings.</div></div>
+    <div class="card"><h3>Negative / huge array length 🔴</h3><p><code>new byte[negative]</code> → NegativeArraySizeException; <code>new byte[huge]</code> → OOM before reading.</p>
+      <div class="def">check length ≥ 0 <b>and</b> length ≤ <code>buf.readableBytes()</code> (or a sane cap) <i>before</i> allocating.</div></div>
+    <div class="card"><h3>Decompression bomb 💣</h3><p>Tiny packet inflates to gigabytes → OOM/CPU burn.</p>
+      <div class="def">cap uncompressed size at <span class="num">2,097,152</span> like vanilla; cap compressed:uncompressed ratio and total inflate rate per connection.</div></div>
+    <div class="card"><h3>Book ban 📚</h3><p>Oversized book pages/signs/item names are broadcast → client-side OOM/crash + log spam.</p>
+      <div class="def">enforce title ≤32, ≤100 pages, page byte cap, and total component size on <b>all</b> broadcast paths (Set Container Content, Creative Slot included).</div></div>
+    <div class="card"><h3>Invalid UTF-8 / chat JSON</h3><p>Decoder exceptions or garbage components reaching other clients.</p>
+      <div class="def">strict UTF-8 decode; validate component depth/size, click/hover events (no <code>javascript:</code> URLs).</div></div>
+    <div class="card"><h3>Entity metadata type mismatch</h3><p>Unknown type id or truncated value → client ArrayIndexOutOfBounds.</p>
+      <div class="def">validate type id against the version table + terminator 0xFF present.</div></div>
+    <div class="card"><h3>Chunk palette crash</h3><p>Bad bits-per-block / palette size / light arrays crash the client.</p>
+      <div class="def">server-side plugins rarely need this; proxy authors: validate palette bounds per version.</div></div>
+    <div class="card"><h3>Brigadier / command crash</h3><p>Malformed command node trees or absurd parse depth.</p>
+      <div class="def">cap command length (32500/256) and Brigadier parse depth; strip unknown node types.</div></div>
+    <div class="card"><h3>Invalid click/slot state</h3><p>Stale state id or out-of-range slot → exceptions, dupes.</p>
+      <div class="def">validate state id freshness and slot ∈ window + player inventory.</div></div>
+    <div class="card"><h3>Packet rate flood</h3><p>Animation/KeepAlive/teleport-confirm spam → CPU exhaustion (kick issue, not JVM crash).</p>
+      <div class="def">per-connection token buckets per packet type; low caps pre-login (status/login).</div></div>
+    <div class="card"><h3>NaN / teleport abuse</h3><p>NaN positions, huge deltas, teleport-confirm flooding.</p>
+      <div class="def"><code>Float.isFinite()</code> checks, delta caps, confirm-id matching.</div></div>
+    <div class="card"><h3>Custom payload flood</h3><p>32,767-byte payloads at high rate = bandwidth/CPU attack.</p>
+      <div class="def">rate-limit plugin messages per channel; validate channel is a known/registered one pre-Play.</div></div>
+    <div class="card"><h3>Handshake spoofing</h3><p><code>\0</code>-separated proxy data on direct connections; intent ≠ 1/2/3; hostname &gt; 255.</p>
+      <div class="def">reject <code>\0</code> when not behind a proxy; whitelist intents; length checks.</div></div>
+    <div class="card"><h3>Resource pack loop (1.17 era)</h3><p>Server resends pack on decline → client stuck/loop.</p>
+      <div class="def">cap resends per join; honor <code>declined</code> state per UUID.</div></div>
+  </div>
+</section>
+
+<!-- ============ CODE ============ -->
+<section id="code">
+  <h2>Netty guard code (copy-paste)</h2>
+  <p>Netty’s <code>ByteBuf</code> has <b>no built-in VarInt</b> — you implement it over <code>readByte()</code>.
+     These snippets add the anticrash bounds the vanilla ones lack.</p>
+
+  <h3>Safe VarInt / VarLong</h3>
+  <pre><code>public static int readVarInt(ByteBuf buf, int maxBytes) {   // 5 in-packet, 3 for length prefix
+    int value = 0, bits = 0;
+    while (true) {
+        if (!buf.isReadable()) throw new DecoderException("VarInt truncated");
+        byte b = buf.readByte();
+        value |= (b &amp; 0x7F) << bits;
+        if ((b &amp; 0x80) == 0) return value;          // note: does NOT reject overlong, add if wanted
+        bits += 7;
+        if (bits > maxBytes * 7 || bits > 32)
+            throw new DecoderException("VarInt too big");
+    }
+}
+
+public static void writeVarInt(ByteBuf buf, int value) {
+    while (true) {
+        if ((value &amp; ~0x7F) == 0) { buf.writeByte(value); return; }
+        buf.writeByte((value &amp; 0x7F) | 0x80);
+        value >>>= 7;
+    }
+}</code></pre>
+
+  <h3>Safe string &amp; byte array (the OOM killer)</h3>
+  <pre><code>public static String readString(ByteBuf buf, int maxBytes) {
+    int len = readVarInt(buf, 5);
+    if (len &lt; 0 || len > maxBytes) throw new DecoderException("String too long: " + len);
+    if (len > buf.readableBytes()) throw new DecoderException("String length exceeds buffer");
+    CharSequence s = buf.readCharSequence(len, StandardCharsets.UTF_8);
+    if (s == null) throw new DecoderException("Bad UTF-8");
+    return s.toString();
+}
+
+public static byte[] readByteArray(ByteBuf buf, int max) {
+    int len = readVarInt(buf, 5);
+    if (len &lt; 0 || len > max) throw new DecoderException("Array too long: " + len);
+    if (len > buf.readableBytes()) throw new DecoderException("Array length exceeds buffer"); // OOM guard
+    byte[] out = new byte[len];
+    buf.readBytes(out);
+    return out;
+}</code></pre>
+
+  <h3>Length-prefix + compression guard</h3>
+  <pre><code>// in your decoder, before reading a packet:
+int length = readVarInt(in, 3);                       // length prefix ≤ 3 bytes
+if (length > 2_097_152) throw new DecoderException("Packet too large");   // 0x200000
+// if compression enabled:
+int dataLength = readVarInt(in, 5);
+if (dataLength > 2_097_152) throw new DecoderException("Badly compressed packet");
+// inflate with a bounded output stream (e.g. Inflater with setLimit / counting wrapper)</code></pre>
+
+  <h3>Rate limiting sketch (per connection)</h3>
+  <pre><code>public boolean tryConsume(PacketType t) {             // token bucket per type
+    long now = System.nanoTime(), refill = (long)((now - last) * ratePerSec / 1e9);
+    tokens = Math.min(capacity, tokens + refill); last = now;
+    if (tokens &lt; 1) return false;                     // false → kick or skip handling
+    tokens -= 1; return true;
+}</code></pre>
+
+  <h3>ByteBuf essentials (Netty 4 javadoc)</h3>
+  <table><thead><tr><th>Method</th><th>Use</th></tr></thead><tbody>
+    <tr><td><code>readableBytes()</code></td><td>writerIndex − readerIndex — your #1 guard before any read</td></tr>
+    <tr><td><code>readBoolean/Byte/UnsignedByte/Short/UnsignedShort/Int/Long/Float/Double</code></td><td>primitives, big-endian</td></tr>
+    <tr><td><code>readCharSequence(len, UTF_8)</code> (4.1+)</td><td>string payload</td></tr>
+    <tr><td><code>readSlice(len)</code></td><td>zero-copy view of a region</td></tr>
+    <tr><td><code>readerIndex()/setIndex()</code></td><td>rewind when validation fails</td></tr>
+    <tr><td><code>retain()/release()/refCnt()</code></td><td>reference counting — leaks or use-after-free</td></tr>
+    <tr><td><code>discardReadBytes()</code></td><td>compaction for accumulators</td></tr>
+  </tbody></table>
+
+  <h3>Interactive VarInt tool</h3>
+  <div class="card">
+    <div class="pg">
+      <label>Int32 → bytes: <input id="enc-in" type="number" value="300" style="width:120px"></label>
+      <span class="out" id="enc-out"></span>
+    </div>
+    <div class="pg">
+      <label>Bytes → Int32: <input id="dec-in" type="text" value="AC 02" style="width:160px" placeholder="e.g. AC 02 or 0xAC,0x02"></label>
+      <span class="out" id="dec-out"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SOURCES ============ -->
+<section id="sources">
+  <h2>Sources</h2>
+  <table><thead><tr><th>Source</th><th>Link</th></tr></thead><tbody>
+    <tr><td>Minecraft Wiki — wiki.vg merge, Protocol &amp; Data types</td><td><a href="https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Protocol">minecraft.wiki/…/wiki.vg_merge/Protocol</a></td></tr>
+    <tr><td>Protocol version numbers</td><td><a href="https://minecraft.wiki/w/Protocol_version_numbers">minecraft.wiki/w/Protocol_version_numbers</a></td></tr>
+    <tr><td>Classic wiki.vg (archived)</td><td><a href="https://wiki.vg/Protocol">wiki.vg/Protocol</a></td></tr>
+    <tr><td>Netty 4.0 ByteBuf javadoc</td><td><a href="https://netty.io/4.0/api/io/netty/buffer/ByteBuf.html">netty.io/4.0/api/io/netty/buffer/ByteBuf.html</a></td></tr>
+    <tr><td>Netty 4.1 ByteBuf javadoc</td><td><a href="https://netty.io/4.1/api/io/netty/buffer/ByteBuf.html">netty.io/4.1/api/io/netty/buffer/ByteBuf.html</a></td></tr>
+    <tr><td>PrismarineJS minecraft-data (protocol.json per version)</td><td><a href="https://github.com/PrismarineJS/minecraft-data">github.com/PrismarineJS/minecraft-data</a></td></tr>
+    <tr><td>PrismarineJS protocol viewer (interactive)</td><td><a href="https://prismarinejs.github.io/protocol-viewer/">prismarinejs.github.io/protocol-viewer</a></td></tr>
+    <tr><td>MCProtocolLib (GeyserMC)</td><td><a href="https://github.com/GeyserMC/MCProtocolLib">github.com/GeyserMC/MCProtocolLib</a></td></tr>
+    <tr><td>ViaVersion (cross-version mapping)</td><td><a href="https://github.com/ViaVersion/ViaVersion">github.com/ViaVersion/ViaVersion</a></td></tr>
+    <tr><td>Glowstone (clean server-side packet handling)</td><td><a href="https://github.com/GlowstoneMC/Glowstone">github.com/GlowstoneMC/Glowstone</a></td></tr>
+  </tbody></table>
+  <div class="note">For <span class="b b-ver">version-dep</span> values, diff two versions quickly with PrismarineJS:
+     <code>data/pc/&lt;version&gt;/protocol.json</code> in the minecraft-data repo.</div>
+</section>
+
+<footer>Built for Minecraft Java Edition anticrash development · values verified against wiki.vg merge + vanilla sources · always re-check version-dependent limits</footer>
+</main>
+</div>
+
+<script>
+// ---- search filter ----
+const q = document.getElementById('q');
+q.addEventListener('input', () => {
+  const v = q.value.trim().toLowerCase();
+  document.querySelectorAll('main section').forEach(sec => {
+    if (sec.id === 'intro') return;
+    let visible = false;
+    sec.querySelectorAll('tbody tr, .card').forEach(el => {
+      const hit = !v || el.textContent.toLowerCase().includes(v);
+      el.style.display = hit ? '' : 'none';
+      if (hit) visible = true;
+    });
+    sec.querySelectorAll('pre, .note, .pg').forEach(el => {
+      const hit = !v || el.textContent.toLowerCase().includes(v);
+      el.style.display = hit ? '' : 'none';
+      if (hit) visible = true;
+    });
+    sec.style.display = visible ? '' : 'none';
+  });
+});
+
+// ---- copy buttons ----
+document.querySelectorAll('pre').forEach(pre => {
+  const btn = document.createElement('button');
+  btn.className = 'copy'; btn.textContent = 'Copy';
+  btn.onclick = () => {
+    navigator.clipboard.writeText(pre.querySelector('code').innerText).catch(()=>{});
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1200);
+  };
+  pre.appendChild(btn);
+});
+
+// ---- scrollspy ----
+const links = [...document.querySelectorAll('#sidenav a')];
+const secs = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting) links.forEach(l =>
+      l.classList.toggle('active', l.getAttribute('href') === '#' + e.target.id));
+  });
+}, { rootMargin: '-15% 0px -70% 0px' });
+secs.forEach(s => io.observe(s));
+
+// ---- VarInt playground ----
+function enc(n) {
+  let v = n >>> 0; const bytes = [];
+  do { let b = v & 0x7F; v >>>= 7; if (v !== 0) b |= 0x80; bytes.push(b); } while (v !== 0);
+  return bytes;
+}
+function dec(bytes) {
+  let r = 0, s = 0;
+  for (const b of bytes) { r |= (b & 0x7F) << s; if (!(b & 0x80)) break; s += 7; }
+  return r | 0;
+}
+const hex = a => a.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ') +
+                 '  (' + a.length + ' byte' + (a.length === 1 ? '' : 's') + ')';
+const encIn = document.getElementById('enc-in'), encOut = document.getElementById('enc-out');
+const decIn = document.getElementById('dec-in'), decOut = document.getElementById('dec-out');
+function updEnc() {
+  let n = parseInt(encIn.value || '0', 10);
+  if (isNaN(n)) n = 0;
+  encOut.textContent = '→ ' + hex(enc(n));
+}
+function updDec() {
+  const parts = decIn.value.split(/[^0-9a-fA-Fx]+/).map(s => s.replace(/^0x/i, '')).filter(s => s.length);
+  if (!parts.length) { decOut.textContent = '→ 0'; return; }
+  const bytes = parts.map(s => parseInt(s, 16) & 0xFF);
+  decOut.textContent = '→ ' + dec(bytes);
+}
+encIn.addEventListener('input', updEnc);
+decIn.addEventListener('input', updDec);
+updEnc(); updDec();
+</script>
+</body>
+</html>
